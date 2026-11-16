@@ -3,24 +3,34 @@ import express from "express";
 import {
     createUser,
     getUsers,
+    getUserById,
     updateUser,
-    deactivateUser
+    approveUser,
+    rejectUser,
+    deactivateUser,
+    activateUser
 } from "../controllers/userController.js";
 
 import {
     authenticateToken,
-    authorizeRoles
+    authorizeRoles,
+    ADMIN_ROLES
 } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Only Chairman can manage user accounts
 router.use(authenticateToken);
-router.use(authorizeRoles("chairman"));
 
-router.post("/", createUser);
-router.get("/", getUsers);
-router.put("/:id", updateUser);
-router.patch("/:id/deactivate", deactivateUser);
+// Chairman and committee can see everyone
+router.get("/", authorizeRoles(...ADMIN_ROLES), getUsers);
+router.get("/:id", authorizeRoles(...ADMIN_ROLES), getUserById);
+
+// Only the chairman adds, edits, approves or (de)activates people
+router.post("/", authorizeRoles("chairman"), createUser);
+router.put("/:id", authorizeRoles("chairman"), updateUser);
+router.patch("/:id/approve", authorizeRoles("chairman"), approveUser);
+router.patch("/:id/reject", authorizeRoles("chairman"), rejectUser);
+router.patch("/:id/deactivate", authorizeRoles("chairman"), deactivateUser);
+router.patch("/:id/activate", authorizeRoles("chairman"), activateUser);
 
 export default router;

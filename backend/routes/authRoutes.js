@@ -2,17 +2,21 @@ import express from "express";
 
 import {
     login,
+    register,
+    registrationStatus,
     getProfile
 } from "../controllers/authController.js";
-
-import {
-    authenticateToken
-} from "../middleware/authMiddleware.js";
+import { authenticateToken } from "../middleware/authMiddleware.js";
+import { authRateLimit } from "../middleware/rateLimitMiddleware.js";
 
 const router = express.Router();
 
-router.post("/login", login);
+// Public
+router.get("/registration-status", registrationStatus);
+router.post("/register", authRateLimit, register);
+router.post("/login", authRateLimit, login);
 
+// Signed in
 router.get("/profile", authenticateToken, getProfile);
 
 export default router;

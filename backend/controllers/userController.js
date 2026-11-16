@@ -1,209 +1,353 @@
 import bcrypt from "bcryptjs";
 import pool from "../config/db.js";
+import { logAudit } from "../services/auditService.js";
+import { notify } from "../services/notificationService.js";
+import { sendEmail } from "../services/emailService.js";
+import * as emails from "../services/emailTemplates.js";
+import { parseId, validateUserBody } from "../utils/userValidation.js";
 
-// CREATE USER
-export const createUser = async (req, res) => {
-    try {
-        const { full_name, email, password, role } = req.body;
+const USER_COLUMNS = `
+    u.id, u.full_name, u.email, u.role, u.phone, u.is_active,
+    u.approval_status, u.reviewed_at, u.rejection_reason, u.created_at,
+    sp.designation, sp.emergency_contact, sp.joining_date
+`;
 
-        const allowedRoles = [
-            "committee",
-            "staff",
-            "volunteer"
-        ];
+const findUser = async (id, db = pool) => {
+    if (!id) return null;
 
-        if (!full_name || !email || !password || !role) {
-            return res.status(400).json({
-                success: false,
-                message: "All fields are required"
-            });
-        }
-
-        if (!allowedRoles.includes(role)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid role"
-            });
-        }
-
-        if (password.length < 8 || password.length > 72) {
-            return res.status(400).json({
-                success: false,
-                message: "Password must be 8 to 72 characters"
-            });
-        }
-
-        const passwordHash = await bcrypt.hash(password, 12);
-
-        const result = await pool.query(
-            `INSERT INTO users
-             (full_name, email, password_hash, role)
-             VALUES ($1, $2, $3, $4)
-             RETURNING id, full_name, email, role, is_active`,
-            [
-                full_name.trim(),
-                email.trim().toLowerCase(),
-                passwordHash,
-                role
-            ]
-        );
-
-        res.status(201).json({
-            success: true,
-            message: "User created successfully",
-            user: result.rows[0]
-        });
-
-    } catch (error) {
-        if (error.code === "23505") {
-            return res.status(409).json({
-                success: false,
-                message: "Email already exists"
-            });
-        }
-
-        console.error("Create user error:", error.message);
-
-        res.status(500).json({
-            success: false,
-            message: "Unable to create user"
-        });
-    }
+    const result = await db.query(
+        `SELECT ${USER_COLUMNS}
+         FROM users u
+         LEFT JOIN staff_profiles sp ON sp.user_id = u.id
+         WHERE u.id = $1`,
+        [id]
+    );
+    return result.rows[0] ?? null;
 };
 
-// GET ALL USERS
+const notFound = (res) =>
+    res.status(404).json({ success: false, message: "User not found" });
+
+// GET /api/users  (chairman, committee)
+// Optional ?status=pending|approved|rejected
 export const getUsers = async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT id, full_name, email, role,
-                    is_active, created_at
-             FROM users
-             ORDER BY id DESC`
-        );
+    const { status } = req.query;
+    const values = [];
+    let where = "";
 
-        res.json({
-            success: true,
-            count: result.rows.length,
-            users: result.rows
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Unable to fetch users"
-        });
+    if (["pending", "approved", "rejected"].includes(status)) {
+        values.push(status);
+        where = "WHERE u.approval_status = $1";
     }
+
+    const result = await pool.query(
+        `SELECT ${USER_COLUMNS}
+         FROM users u
+         LEFT JOIN staff_profiles sp ON sp.user_id = u.id
+         ${where}
+         ORDER BY u.is_active DESC, u.full_name`,
+        values
+    );
+
+    res.json({
+        success: true,
+        count: result.rowCount,
+        users: result.rows
+    });
 };
 
-// UPDATE USER
+// GET /api/users/:id  (chairman, committee)
+export const getUserById = async (req, res) => {
+    const user = await findUser(parseId(req.params.id));
+    if (!user) return notFound(res);
+
+    res.json({ success: true, user });
+};
+
+// POST /api/users  (chairman) – adds someone directly, already approved.
+export const createUser = async (req, res) => {
+    const { error, data } = validateUserBody(req.body, { requirePassword: true });
+
+    if (error) {
+        return res.status(400).json({ success: false, message: error });
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 12);
+    const client = await pool.connect();
+    let user;
+
+    try {
+        await client.query("BEGIN");
+
+        const inserted = await client.query(
+            `INSERT INTO users
+                (full_name, email, password_hash, role, phone,
+                 approval_status, reviewed_by, reviewed_at)
+             VALUES ($1, $2, $3, $4, $5, 'approved', $6, NOW())
+             RETURNING id`,
+            [data.full_name, data.email, passwordHash, data.role, data.phone, req.user.id]
+        );
+        const id = inserted.rows[0].id;
+
+        await client.query(
+            `INSERT INTO staff_profiles
+                (user_id, designation, emergency_contact, joining_date)
+             VALUES ($1, $2, $3, $4)`,
+            [id, data.designation, data.emergency_contact, data.joining_date]
+        );
+
+        user = await findUser(id, client);
+
+        await logAudit({
+            actorId: req.user.id,
+            action: "user.created",
+            entityType: "user",
+            entityId: id,
+            details: { role: data.role, designation: data.designation }
+        }, client);
+
+        await client.query("COMMIT");
+    } catch (err) {
+        await client.query("ROLLBACK");
+
+        if (err.code === "23505") {
+            return res.status(409).json({ success: false, message: "Email already exists" });
+        }
+        throw err;
+    } finally {
+        client.release();
+    }
+
+    await notify({
+        userId: user.id,
+        title: `Welcome, ${user.full_name}`,
+        message: `${req.user.full_name} added you to the temple team.`,
+        type: "account"
+    });
+
+    res.status(201).json({
+        success: true,
+        message: "User created successfully",
+        user
+    });
+};
+
+// PUT /api/users/:id  (chairman). Send "password" only to reset it.
 export const updateUser = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { full_name, email, role } = req.body;
+    const id = parseId(req.params.id);
+    const before = await findUser(id);
+    if (!before) return notFound(res);
 
-        const allowedRoles = [
-            "chairman",
-            "committee",
-            "staff",
-            "volunteer"
-        ];
-
-        if (!full_name || !email || !role ||
-            !allowedRoles.includes(role)) {
-            return res.status(400).json({
-                success: false,
-                message: "Provide valid name, email and role"
-            });
-        }
-
-        // Prevent changing the only Chairman's role
-        if (Number(id) === req.user.id &&
-            req.user.role === "chairman" &&
-            role !== "chairman") {
-            return res.status(403).json({
-                success: false,
-                message: "You cannot remove your own Chairman role"
-            });
-        }
-
-        const result = await pool.query(
-            `UPDATE users
-             SET full_name = $1, email = $2, role = $3
-             WHERE id = $4
-             RETURNING id, full_name, email, role, is_active`,
-            [
-                full_name.trim(),
-                email.trim().toLowerCase(),
-                role,
-                id
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
-        }
-
-        res.json({
-            success: true,
-            message: "User updated successfully",
-            user: result.rows[0]
-        });
-
-    } catch (error) {
-        if (error.code === "23505") {
-            return res.status(409).json({
-                success: false,
-                message: "Email already exists"
-            });
-        }
-
-        res.status(500).json({
+    if (before.role === "chairman") {
+        return res.status(403).json({
             success: false,
-            message: "Unable to update user"
+            message: "The chairman account can't be changed here"
         });
     }
-};
 
-// DEACTIVATE USER
-export const deactivateUser = async (req, res) => {
+    const { error, data } = validateUserBody(req.body, { requirePassword: false });
+
+    if (error) {
+        return res.status(400).json({ success: false, message: error });
+    }
+
+    const passwordHash = data.password ? await bcrypt.hash(data.password, 12) : null;
+    const client = await pool.connect();
+    let user;
+
     try {
-        const { id } = req.params;
+        await client.query("BEGIN");
 
-        if (Number(id) === req.user.id) {
-            return res.status(400).json({
-                success: false,
-                message: "You cannot deactivate your own account"
-            });
-        }
-
-        const result = await pool.query(
+        await client.query(
             `UPDATE users
-             SET is_active = FALSE
-             WHERE id = $1
-             RETURNING id, full_name, email, role, is_active`,
-            [id]
+             SET full_name = $1, email = $2, role = $3, phone = $4,
+                 password_hash = COALESCE($5, password_hash)
+             WHERE id = $6`,
+            [data.full_name, data.email, data.role, data.phone, passwordHash, id]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
+        await client.query(
+            `INSERT INTO staff_profiles
+                (user_id, designation, emergency_contact, joining_date)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (user_id) DO UPDATE
+             SET designation = EXCLUDED.designation,
+                 emergency_contact = EXCLUDED.emergency_contact,
+                 joining_date = EXCLUDED.joining_date`,
+            [id, data.designation, data.emergency_contact, data.joining_date]
+        );
+
+        user = await findUser(id, client);
+
+        const changed = Object.fromEntries(
+            ["full_name", "email", "role", "phone", "designation",
+             "emergency_contact", "joining_date"]
+                .filter((key) => String(before[key] ?? "") !== String(user[key] ?? ""))
+                .map((key) => [key, { from: before[key], to: user[key] }])
+        );
+
+        await logAudit({
+            actorId: req.user.id,
+            action: "user.updated",
+            entityType: "user",
+            entityId: id,
+            details: { changed, password_reset: Boolean(passwordHash) }
+        }, client);
+
+        await client.query("COMMIT");
+    } catch (err) {
+        await client.query("ROLLBACK");
+
+        if (err.code === "23505") {
+            return res.status(409).json({ success: false, message: "Email already exists" });
         }
+        throw err;
+    } finally {
+        client.release();
+    }
 
-        res.json({
-            success: true,
-            message: "User deactivated successfully",
-            user: result.rows[0]
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Unable to deactivate user"
+    if (passwordHash) {
+        await notify({
+            userId: id,
+            title: "Your password was reset",
+            message: `${req.user.full_name} set a new password for your account.`,
+            type: "account"
         });
     }
+
+    res.json({
+        success: true,
+        message: "User updated successfully",
+        user
+    });
 };
+
+// PATCH /api/users/:id/approve  (chairman)
+// Also works on a previously rejected registration (change of mind).
+export const approveUser = async (req, res) => {
+    const id = parseId(req.params.id);
+    const result = await pool.query(
+        `UPDATE users
+         SET approval_status = 'approved', is_active = TRUE,
+             reviewed_by = $2, reviewed_at = NOW(), rejection_reason = NULL
+         WHERE id = $1 AND approval_status IN ('pending', 'rejected')
+         RETURNING id`,
+        [id, req.user.id]
+    );
+
+    if (result.rowCount === 0) {
+        return res.status(404).json({
+            success: false,
+            message: "No registration waiting for approval with that id"
+        });
+    }
+
+    const user = await findUser(id);
+
+    await logAudit({
+        actorId: req.user.id,
+        action: "user.approved",
+        entityType: "user",
+        entityId: id,
+        details: { role: user.role, designation: user.designation }
+    });
+
+    await notify({
+        userId: id,
+        title: `Welcome, ${user.full_name}`,
+        message: `${req.user.full_name} approved your registration.`,
+        type: "account"
+    });
+
+    await sendEmail({ to: user.email, ...emails.registrationApproved(user) });
+
+    res.json({
+        success: true,
+        message: `${user.full_name} is approved and can now sign in`,
+        user
+    });
+};
+
+// PATCH /api/users/:id/reject  (chairman)  body: { reason }
+export const rejectUser = async (req, res) => {
+    const id = parseId(req.params.id);
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+    if (!reason || reason.length > 500) {
+        return res.status(400).json({
+            success: false,
+            message: "Please give a reason (up to 500 characters)"
+        });
+    }
+
+    const result = await pool.query(
+        `UPDATE users
+         SET approval_status = 'rejected', reviewed_by = $2,
+             reviewed_at = NOW(), rejection_reason = $3
+         WHERE id = $1 AND approval_status = 'pending'
+         RETURNING id`,
+        [id, req.user.id, reason]
+    );
+
+    if (result.rowCount === 0) {
+        return res.status(404).json({
+            success: false,
+            message: "No registration waiting for approval with that id"
+        });
+    }
+
+    const user = await findUser(id);
+
+    await logAudit({
+        actorId: req.user.id,
+        action: "user.rejected",
+        entityType: "user",
+        entityId: id,
+        details: { reason }
+    });
+
+    await sendEmail({ to: user.email, ...emails.registrationRejected(user, reason) });
+
+    res.json({
+        success: true,
+        message: `${user.full_name}'s registration was rejected`,
+        user
+    });
+};
+
+// PATCH /api/users/:id/deactivate and /activate  (chairman)
+const setActive = (isActive) => async (req, res) => {
+    const id = parseId(req.params.id);
+
+    if (id === req.user.id) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot change your own account status"
+        });
+    }
+
+    const result = await pool.query(
+        `UPDATE users SET is_active = $1
+         WHERE id = $2 AND role <> 'chairman' AND approval_status = 'approved'
+         RETURNING id`,
+        [isActive, id]
+    );
+
+    if (result.rowCount === 0) return notFound(res);
+
+    await logAudit({
+        actorId: req.user.id,
+        action: isActive ? "user.activated" : "user.deactivated",
+        entityType: "user",
+        entityId: id
+    });
+
+    res.json({
+        success: true,
+        message: isActive ? "User reactivated" : "User deactivated",
+        user: await findUser(id)
+    });
+};
+
+export const deactivateUser = setActive(false);
+export const activateUser = setActive(true);

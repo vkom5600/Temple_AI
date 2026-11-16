@@ -7,7 +7,7 @@ export const getNotifications = async (req, res) => {
     const { unread_only } = req.query;
 
     let query = `
-      SELECT id, title, message, is_read, created_at
+      SELECT id, title, message, notification_type, is_read, created_at
       FROM notifications
       WHERE user_id = $1
     `;

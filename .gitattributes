@@ -1,0 +1,5 @@
+# Store text files with LF in the repo; each OS converts on checkout as needed.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary

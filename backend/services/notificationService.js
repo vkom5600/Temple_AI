@@ -1,68 +1,56 @@
-
 import pool from "../config/db.js";
 
-// Create a notification for one user
-export const createNotification = async ({
+// Send an in-app notification. Pick recipients with any mix of:
+//   userId / userIds   specific people
+//   roles              e.g. ["chairman", "committee"]
+//   designations       e.g. ["cleaner"]  (staff job, from staff_profiles)
+// Only active, approved users receive it, and nobody gets the same one twice.
+//   await notify({ roles: ["chairman"], title: "...", message: "...", type: "attendance" });
+// Never throws: returns the notifications created ([] on failure).
+export const notify = async ({
   userId,
+  userIds = [],
+  roles = [],
+  designations = [],
   title,
-  message
-}) => {
-  if (!userId || !title || !message) {
-    throw new Error(
-      "User ID, notification title and message are required"
+  message = null,
+  type = "general"
+}, db = pool) => {
+  const ids = [...userIds, ...(userId ? [userId] : [])].map(Number);
+
+  if (!title || (!ids.length && !roles.length && !designations.length)) {
+    console.error("notify() needs a title and at least one recipient");
+    return [];
+  }
+
+  try {
+    const result = await db.query(
+      `INSERT INTO notifications (user_id, title, message, notification_type)
+       SELECT DISTINCT u.id, $4, $5, $6
+       FROM users u
+       LEFT JOIN staff_profiles sp ON sp.user_id = u.id
+       WHERE u.is_active AND u.approval_status = 'approved'
+         AND (u.id = ANY($1::int[])
+              OR u.role = ANY($2::varchar[])
+              OR sp.designation = ANY($3::varchar[]))
+       RETURNING *`,
+      [ids, roles, designations, title, message, type]
     );
-  }
 
-  const result = await pool.query(
-    `INSERT INTO notifications
-      (user_id, title, message)
-     VALUES ($1, $2, $3)
-     RETURNING *`,
-    [userId, title, message]
-  );
-
-  return result.rows[0];
-};
-
-// Notify all active users belonging to specified roles
-export const notifyUsersByRoles = async ({
-  roles,
-  title,
-  message
-}) => {
-  if (!Array.isArray(roles) || roles.length === 0) {
-    return [];
-  }
-
-  const result = await pool.query(
-    `INSERT INTO notifications (user_id, title, message)
-     SELECT id, $2, $3
-     FROM users
-     WHERE role = ANY($1::varchar[])
-       AND is_active = TRUE
-     RETURNING *`,
-    [roles, title, message]
-  );
-
-  return result.rows;
-};
-
-// Safely send notifications without failing the main operation
-export const sendNotificationSafely = async (notificationData) => {
-  try {
-    return await createNotification(notificationData);
+    return result.rows;
   } catch (error) {
-    console.error("Notification creation failed:", error.message);
-    return null;
-  }
-};
-
-// Safely notify users by role
-export const notifyRolesSafely = async (notificationData) => {
-  try {
-    return await notifyUsersByRoles(notificationData);
-  } catch (error) {
-    console.error("Role notification failed:", error.message);
+    console.error(`Notification failed (${title}):`, error.message);
     return [];
   }
 };
+
+// ---- Older names used by the task and booking controllers ----
+
+export const sendNotificationSafely = async ({ userId, title, message, type }) =>
+  (await notify({ userId, title, message, type }))[0] ?? null;
+
+export const notifyRolesSafely = ({ roles, title, message, type }) =>
+  notify({ roles, title, message, type });
+
+export const createNotification = sendNotificationSafely;
+export const notifyUsersByRoles = notifyRolesSafely;
