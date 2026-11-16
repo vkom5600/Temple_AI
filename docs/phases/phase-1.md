@@ -2,6 +2,8 @@
 
 **Branch:** `phase-1` · **Date:** 16 Nov 2026 · **Built by:** Venkat with Claude Code
 
+Full detail (decisions, data model, API, testing, handover): [phase-1-report.md](phase-1-report.md)
+
 ## Done when (from the plan)
 
 - [x] Each role logs in and lands on the right home screen (chairman/committee → `/admin`, staff/volunteer → `/staff`)
