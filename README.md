@@ -1,5 +1,7 @@
 # Temple AI – Operations & Management System
 
+> **New here? Start with [docs/HANDOVER.md](docs/HANDOVER.md)**: what's built, how to run it, how it fits together, and what's next.
+
 Web app for running the temple day to day: people, tasks, attendance, hall bookings, an AI assistant and daily reports.
 
 | Part | Stack | Folder |
