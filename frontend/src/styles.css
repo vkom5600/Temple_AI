@@ -560,3 +560,13 @@ a.nav-item, a.btn { text-decoration: none; }
   .reg-row { flex-wrap: wrap; }
   .reg-actions { width: 100%; justify-content: flex-end; }
 }
+
+/* ---------- Phase 2 additions: tasks + issues ---------- */
+a.stat-link { color: inherit; text-decoration: none; }
+.assignee-row { flex-wrap: nowrap; margin-bottom: 6px; }
+.assignee-row select { flex: 1; }
+.signoff-box { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-top: 12px; }
+.comment-form { flex-wrap: nowrap; margin-top: 10px; }
+.comment-form input { flex: 1; }
+.comment-sent_back, .comment-flagged { color: var(--red); }
+.comment-system { color: var(--muted); }

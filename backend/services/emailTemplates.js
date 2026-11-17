@@ -64,3 +64,13 @@ export const loginAlertToChairman = (user) => ({
     `You can turn these emails off in Settings: ${appUrl()}/admin/settings\n\n` +
     `${APP}`
 });
+
+export const taskReminder = (task, sender) => ({
+  subject: `${APP}: reminder – ${task.title}`,
+  text:
+    `Namaste,\n\n` +
+    `A gentle reminder from ${sender.full_name}: "${task.title}"` +
+    `${task.area ? ` (${task.area})` : ""} was due ${when(new Date(task.due_at))}.\n` +
+    `Please complete it today, or tell us in the app if something is stopping you:\n${appUrl()}\n\n` +
+    `${APP}`
+});

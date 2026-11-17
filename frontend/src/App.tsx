@@ -11,6 +11,9 @@ import RegisterPage from './pages/RegisterPage'
 import SettingsPage from './pages/admin/SettingsPage'
 import AdminHome from './pages/admin/AdminHome'
 import PeoplePage from './pages/admin/PeoplePage'
+import TasksPage from './pages/admin/TasksPage'
+import IssuesPage from './pages/admin/IssuesPage'
+import SignoffsPage from './pages/admin/SignoffsPage'
 import StaffHome from './pages/staff/StaffHome'
 
 export default function App() {
@@ -24,6 +27,9 @@ export default function App() {
 
             <Route path="/admin" element={<RequireRole roles={['chairman', 'committee']}><AdminLayout /></RequireRole>}>
               <Route index element={<AdminHome />} />
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="issues" element={<IssuesPage />} />
+              <Route path="signoffs" element={<SignoffsPage />} />
               <Route path="people" element={<PeoplePage />} />
               <Route path="settings" element={<RequireRole roles={['chairman']}><SettingsPage /></RequireRole>} />
             </Route>

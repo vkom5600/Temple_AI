@@ -60,3 +60,95 @@ export interface Setting {
   label: string
   updated_at: string
 }
+
+// ---------- Phase 2: tasks + issues ----------
+
+export type TaskGroup = Designation | 'staff' | 'volunteer' | 'committee'
+export type TaskStatus = 'todo' | 'awaiting_signoff' | 'done' | 'flagged' | 'cancelled'
+export type Priority = 'low' | 'normal' | 'high'
+export type Recurrence = 'none' | 'daily' | 'weekly'
+
+export interface Task {
+  id: number
+  title: string
+  description: string | null
+  category: string
+  area: string | null
+  assigned_to: number | null
+  assigned_to_name: string | null
+  assigned_group: TaskGroup | null
+  priority: Priority
+  requires_verification: boolean
+  status: TaskStatus
+  due_at: string
+  recurrence: Recurrence
+  series_id: number | null
+  completed_by: number | null
+  completed_by_name: string | null
+  completed_at: string | null
+  verified_by: number | null
+  verified_by_name: string | null
+  verified_at: string | null
+  last_reminded_at: string | null
+  reminder_count: number
+  created_by: number | null
+  created_by_name: string | null
+  created_at: string
+  is_overdue: boolean
+  last_comment: string | null
+  last_comment_type: TaskComment['comment_type'] | null
+  comment_count: number
+}
+
+export interface TaskComment {
+  id: number
+  comment: string
+  comment_type: 'comment' | 'sent_back' | 'flagged' | 'system'
+  created_at: string
+  user_id: number | null
+  user_name: string | null
+}
+
+export interface TaskInput {
+  title: string
+  description: string
+  category: string
+  area: string
+  assigned_to: number | null
+  assigned_group: TaskGroup | null
+  priority: Priority
+  requires_verification: boolean
+  due_at: string
+  recurrence: Recurrence
+}
+
+export interface TaskSummary {
+  today_total: number
+  today_done: number
+  overdue: number
+  awaiting_signoff: number
+  flagged: number
+  open_issues: number
+}
+
+export type TaskView = 'open' | 'overdue' | 'signoff' | 'flagged' | 'done' | 'all'
+
+export interface Issue {
+  id: number
+  reported_by: number | null
+  reported_by_name: string | null
+  task_id: number | null
+  task_title: string | null
+  task_status: TaskStatus | null
+  category: string
+  description: string
+  status: 'open' | 'resolved' | 'converted'
+  resolved_by_name: string | null
+  resolved_at: string | null
+  resolution_note: string | null
+  created_task_id: number | null
+  created_task_title: string | null
+  created_task_group: TaskGroup | null
+  created_task_assignee_name: string | null
+  created_at: string
+}

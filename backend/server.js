@@ -12,8 +12,10 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 
 // Later phases: the code exists (draft) but its tables arrive with that
 // phase's migration. Uncomment each block when the phase is built.
-// Phase 2
-// import taskRoutes from "./routes/taskRoutes.js";
+// Phase 2: tasks + issues (attendance: Mega, feature/attendance)
+import taskRoutes from "./routes/taskRoutes.js";
+import issueRoutes from "./routes/issueRoutes.js";
+import { startRepeatingTasksJob } from "./jobs/repeatingTasksJob.js";
 // import attendanceRoutes from "./routes/attendanceRoutes.js";
 // Phase 3
 // import bookingRoutes from "./routes/bookingRoutes.js";
@@ -35,7 +37,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/settings", settingsRoutes);
 
-// app.use("/api/tasks", taskRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/issues", issueRoutes);
 // app.use("/api/attendance", attendanceRoutes);
 // app.use("/api/bookings", bookingRoutes);
 // app.use("/api/calendar", calendarRoutes);
@@ -69,6 +72,8 @@ const PORT = Number(process.env.PORT) || 5000;
 
 app.listen(PORT, () => {
     console.log(`Temple AI API running on http://localhost:${PORT}`);
+
+    startRepeatingTasksJob();
 
     // Phase 4
     // startDailyReportJob();

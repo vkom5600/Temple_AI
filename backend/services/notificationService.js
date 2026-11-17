@@ -4,6 +4,7 @@ import pool from "../config/db.js";
 //   userId / userIds   specific people
 //   roles              e.g. ["chairman", "committee"]
 //   designations       e.g. ["cleaner"]  (staff job, from staff_profiles)
+//   excludeUserId      leave one person out (e.g. whoever caused the event)
 // Only active, approved users receive it, and nobody gets the same one twice.
 //   await notify({ roles: ["chairman"], title: "...", message: "...", type: "attendance" });
 // Never throws: returns the notifications created ([] on failure).
@@ -12,6 +13,7 @@ export const notify = async ({
   userIds = [],
   roles = [],
   designations = [],
+  excludeUserId = null,
   title,
   message = null,
   type = "general"
@@ -33,8 +35,9 @@ export const notify = async ({
          AND (u.id = ANY($1::int[])
               OR u.role = ANY($2::varchar[])
               OR sp.designation = ANY($3::varchar[]))
+         AND u.id IS DISTINCT FROM $7
        RETURNING *`,
-      [ids, roles, designations, title, message, type]
+      [ids, roles, designations, title, message, type, excludeUserId]
     );
 
     return result.rows;

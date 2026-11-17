@@ -25,6 +25,13 @@ API JSON uses the database names (snake_case: `full_name`, `is_active`). The fro
 - `staff_profiles.designation` is **job**: `priest`, `cook`, `cleaner`, `caretaker`, `security`, `maintenance` (staff only). Use it to send a task to "all cleaners".
 - Admins are chairman + committee (`ADMIN_ROLES`). Only the chairman manages people.
 
+## Tasks (Phase 2)
+
+- Task statuses are exactly: `todo`, `awaiting_signoff`, `done`, `flagged`, `cancelled`. Don't invent others; add a migration and update `StatusBadge` if one is ever needed.
+- A task goes to **one** of `assigned_to` (a person) or `assigned_group` (a job, `staff`, `volunteer` or `committee`).
+- Use `notifyAssignees(task, …)` from `services/taskService.js` to reach whoever a task is for.
+- Use `TIMEZONE` (from `TEMPLE_TIMEZONE`) for anything "today"; never the server's own clock zone.
+
 ## Backend (Node + Express, JavaScript ES modules)
 
 ```

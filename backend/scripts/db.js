@@ -6,7 +6,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pool from "../config/db.js";
-import { seedDemoData } from "./seed.js";
+import { seedDemoData, seedDemoTasks } from "./seed.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.join(here, "..", "database", "migrations");
@@ -69,6 +69,7 @@ async function reset() {
     console.log("Database wiped.");
     await migrate();
     await seedDemoData(pool);
+    await seedDemoTasks(pool);
 }
 
 const commands = {
@@ -77,6 +78,7 @@ const commands = {
     seed: async () => {
         assertNotProduction("db:seed");
         await seedDemoData(pool);
+        await seedDemoTasks(pool);
     }
 };
 

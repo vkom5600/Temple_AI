@@ -11,6 +11,8 @@ Web app for running the temple day to day: people, tasks, attendance, hall booki
 
 **Status:** Phase 1 (foundation): sign in, self-registration with chairman approval, roles, people, notifications, emails, settings, audit log. See [docs/phases/phase-1.md](docs/phases/phase-1.md).
 
+**Phase 2 (this branch):** tasks (assign to a person or a whole job, repeating tasks, safety sign-off by a second person, reminders) and issues (report a problem, "can't do this", resolve or turn into a task). See [docs/phases/phase-2-tasks.md](docs/phases/phase-2-tasks.md).
+
 ## Run it locally
 
 You need Node 20+ and PostgreSQL 14+.
