@@ -52,6 +52,14 @@ export const validateTaskBody = async (body = {}) => {
     if (!RECURRENCES.includes(data.recurrence)) {
         return { error: `Repeats must be one of: ${RECURRENCES.join(", ")}` };
     }
+    // No deadline is allowed (null or ""), except for repeating tasks.
+    if (data.due_at === null || data.due_at === undefined || data.due_at === "") {
+        if (data.recurrence !== "none") {
+            return { error: "Repeating tasks need a time" };
+        }
+        data.due_at = null;
+        return { data };
+    }
     if (typeof data.due_at !== "string" || Number.isNaN(Date.parse(data.due_at))) {
         return { error: "Give a valid due date and time" };
     }

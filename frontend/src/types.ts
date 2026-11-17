@@ -80,7 +80,7 @@ export interface Task {
   priority: Priority
   requires_verification: boolean
   status: TaskStatus
-  due_at: string
+  due_at: string | null // null = no deadline ("any time")
   recurrence: Recurrence
   series_id: number | null
   completed_by: number | null
@@ -118,7 +118,7 @@ export interface TaskInput {
   assigned_group: TaskGroup | null
   priority: Priority
   requires_verification: boolean
-  due_at: string
+  due_at: string | null
   recurrence: Recurrence
 }
 
@@ -210,4 +210,23 @@ export interface AttendanceInput {
   check_in: string | null
   check_out: string | null
   notes: string
+}
+
+// ---------- Broadcast (H3) and Activity log (R2) ----------
+
+export type BroadcastAudience = 'everyone' | 'staff' | 'volunteer' | 'committee'
+
+export interface AuditEntry {
+  id: number
+  actor_id: number | null
+  actor_name: string | null
+  action: string
+  entity_type: string | null
+  entity_id: number | null
+  details: Record<string, unknown>
+  created_at: string
+  task_title: string | null
+  target_name: string | null
+  attendance_name: string | null
+  issue_text: string | null
 }

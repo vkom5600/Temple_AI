@@ -35,9 +35,19 @@ export const getAuditLogs = async (req, res) => {
         a.entity_type,
         a.entity_id,
         a.details,
-        a.created_at
+        a.created_at,
+        -- Names of what each entry is about, for readable sentences (R2 Activity log)
+        COALESCE(t.title, a.details->>'title') AS task_title,
+        target.full_name AS target_name,
+        att_user.full_name AS attendance_name,
+        i.description AS issue_text
       FROM audit_logs a
       LEFT JOIN users u ON a.actor_id = u.id
+      LEFT JOIN tasks t ON a.entity_type = 'task' AND t.id = a.entity_id
+      LEFT JOIN users target ON a.entity_type = 'user' AND target.id = a.entity_id
+      LEFT JOIN attendance att ON a.entity_type = 'attendance' AND att.id = a.entity_id
+      LEFT JOIN users att_user ON att_user.id = att.user_id
+      LEFT JOIN issues i ON a.entity_type = 'issue' AND i.id = a.entity_id
       WHERE 1 = 1
     `;
 
@@ -51,6 +61,15 @@ export const getAuditLogs = async (req, res) => {
     if (entity_type) {
       values.push(entity_type);
       query += ` AND a.entity_type = $${values.length}`;
+    }
+
+    // Free-text search over who did it, what they did and what it was about
+    const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
+    if (q) {
+      values.push(`%${q}%`);
+      const n = values.length;
+      query += ` AND (u.full_name ILIKE $${n} OR a.action ILIKE $${n} OR t.title ILIKE $${n}` +
+        ` OR target.full_name ILIKE $${n} OR att_user.full_name ILIKE $${n} OR i.description ILIKE $${n})`;
     }
 
     query += " ORDER BY a.created_at DESC, a.id DESC";

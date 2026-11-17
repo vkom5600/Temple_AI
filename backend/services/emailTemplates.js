@@ -70,7 +70,7 @@ export const taskReminder = (task, sender) => ({
   text:
     `Namaste,\n\n` +
     `A gentle reminder from ${sender.full_name}: "${task.title}"` +
-    `${task.area ? ` (${task.area})` : ""} was due ${when(new Date(task.due_at))}.\n` +
+    `${task.area ? ` (${task.area})` : ""}${task.due_at ? ` was due ${when(new Date(task.due_at))}` : " is still waiting"}.\n` +
     `Please complete it today, or tell us in the app if something is stopping you:\n${appUrl()}\n\n` +
     `${APP}`
 });

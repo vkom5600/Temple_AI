@@ -23,7 +23,7 @@ import { startClosingCheckJob } from "./jobs/closingCheckJob.js";
 // import calendarRoutes from "./routes/calendarRoutes.js";
 // import aiRoutes from "./routes/aiRoutes.js";
 // Phase 4
-// import auditRoutes from "./routes/auditRoutes.js";
+import auditRoutes from "./routes/auditRoutes.js";
 // import reportRoutes from "./routes/reportRoutes.js";
 // import { startDailyReportJob } from "./jobs/dailyReportJob.js";
 // import { startOverdueReminderJob } from "./jobs/overdueReminderJob.js";
@@ -44,7 +44,7 @@ app.use("/api/attendance", attendanceRoutes);
 // app.use("/api/bookings", bookingRoutes);
 // app.use("/api/calendar", calendarRoutes);
 // app.use("/api/ai", aiRoutes);
-// app.use("/api/audit-logs", auditRoutes);
+app.use("/api/audit-logs", auditRoutes);
 // app.use("/api/reports", reportRoutes);
 
 app.get("/api/health", async (req, res) => {

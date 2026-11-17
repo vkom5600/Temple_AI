@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { tasksApi } from '../../api/endpoints'
-import { assigneeLabel, isFinished } from '../../lib/tasks'
+import { assigneeLabel, byDue, hhmm, isFinished } from '../../lib/tasks'
 import { Icon, Modal, Spinner } from '../../components/ui'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import TaskForm from '../../components/tasks/TaskForm'
@@ -13,7 +13,6 @@ import type { Task } from '../../types'
 // Until then the entries are the temple's tasks; clicking a day opens that day.
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 type Filter = 'all' | 'safety' | 'routine'
 
 export default function CalendarPage() {
@@ -35,10 +34,11 @@ export default function CalendarPage() {
   const weeks = Math.ceil((((month.getDay() + 6) % 7) + new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) / 7)
   const days = Array.from({ length: weeks * 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d })
 
-  const shown = (tasks ?? []).filter((t) => filter === 'all' || (filter === 'safety' ? t.requires_verification : t.recurrence !== 'none'))
+  // Tasks with no deadline have no day, so they aren't on the calendar.
+  const shown = (tasks ?? []).filter((t) => t.due_at && (filter === 'all' || (filter === 'safety' ? t.requires_verification : t.recurrence !== 'none')))
   const byDay = new Map<string, Task[]>()
-  for (const t of [...shown].sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime())) {
-    const k = dayKey(new Date(t.due_at))
+  for (const t of [...shown].sort(byDue)) {
+    const k = dayKey(new Date(t.due_at!))
     byDay.set(k, [...(byDay.get(k) ?? []), t])
   }
   const today = dayKey(new Date())

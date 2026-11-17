@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
+import { useAdminContext } from '../../layouts/AdminLayout'
 import { attendanceApi, tasksApi, usersApi } from '../../api/endpoints'
 import { DESIGNATION_LABELS, ROLE_GROUPS, ROLE_LABELS, jobLabel } from '../../constants'
 import { fmtTime, toDateInput } from '../../lib/format'
@@ -36,6 +37,7 @@ const toInput = (u: User): UserInput => ({
 export default function PeoplePage() {
   const { user: me } = useAuth()
   const canEdit = me?.role === 'chairman'
+  const { openBroadcast } = useAdminContext()
   const [people, setPeople] = useState<User[] | null>(null)
   const [day, setDay] = useState<AttendanceDay | null>(null)
   const [error, setError] = useState('')
@@ -78,11 +80,10 @@ export default function PeoplePage() {
           <h1>People</h1>
           <p>Staff, volunteers and committee</p>
         </div>
-        {canEdit && (
-          <div className="head-actions">
-            <button className="btn btn-primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> Add person</button>
-          </div>
-        )}
+        <div className="head-actions">
+          <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>
+          {canEdit && <button className="btn btn-primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> Add person</button>}
+        </div>
       </header>
 
       {day && (

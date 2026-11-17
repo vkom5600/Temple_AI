@@ -1,21 +1,39 @@
 # Temple AI – Operations & Management System
+**Ilford Hindu Centre · Vishwa Hindu Parishad (UK)**
 
-> **New here? Start with [docs/HANDOVER.md](docs/HANDOVER.md)**: what's built, how to run it, how it fits together, and what's next.
+> ### 📋 Presenting today? Start with **[docs/PRESENTATION.md](docs/PRESENTATION.md)**
+> The script: what's built (with screenshots), what to say, what's next, and how to run and deploy it.
+> Full status by page: **[docs/PROGRESS-REPORT.md](docs/PROGRESS-REPORT.md)** · How it works: **[docs/HANDOVER.md](docs/HANDOVER.md)**
 
-Web app for running the temple day to day: people, tasks, attendance, hall bookings, an AI assistant and daily reports.
+A web app for running the temple day to day:
+- **Admin app** for the chairman and committee (desktop, and "Needs you" on a phone).
+- **Staff phone app** for priests, cooks, cleaners and volunteers.
+- **Sign-up page** for new volunteers and staff.
+
+| Home (chairman) | Staff phone | Rao garu's phone |
+|---|---|---|
+| ![Home](docs/screenshots/02-home.jpg) | ![Staff phone](docs/screenshots/16-phone-staff.jpg) | ![Chairman phone](docs/screenshots/17-phone-chairman.jpg) |
+
+### Where we are (17 Nov 2026)
+
+| Phase | What | Status |
+|---|---|---|
+| 0 | Setup: repo, standards, demo accounts | ✅ Done |
+| 1 | Sign in, roles, people, sign-up with chairman approval, notifications, audit log | ✅ Done |
+| 2 | Tasks (repeat, safety sign-off, no-deadline), problems, attendance (check in/out, last-person lock-up) | ✅ Done |
+| Design | Every Phase 1–2 screen built to the agreed Stitch designs. Also working: Broadcast, Calendar (month/day), Reports and Activity log, Ask AI (live-data preview), Rao garu's phone | ✅ Done |
+| 3 | Hall bookings + Temple Rules, Google Calendar two-way sync, Temple AI (Claude) | ⏳ Next |
+| 4 | AI nightly report, festival Home, per-area committee access, sign-up link/QR | ⏳ |
+| 5 | Testing with the committee, deployment, release 1.0 | ⏳ |
+
+All screens: [docs/screenshots/](docs/screenshots/)
 
 | Part | Stack | Folder |
 |---|---|---|
 | Frontend | React 19 + TypeScript + Vite | [frontend/](frontend/) |
 | Backend | Node.js + Express 5 (JavaScript, ES modules) | [backend/](backend/) |
 | Database | PostgreSQL | [backend/database/migrations/](backend/database/migrations/) |
-| Docs | Standards, phase notes | [docs/](docs/) |
-
-**Status:** Phase 1 (foundation): sign in, self-registration with chairman approval, roles, people, notifications, emails, settings, audit log. See [docs/phases/phase-1.md](docs/phases/phase-1.md).
-
-**Phase 2 (this branch):** tasks (assign to a person or a whole job, repeating tasks, safety sign-off by a second person, reminders) and issues (report a problem, "can't do this", resolve or turn into a task). See [docs/phases/phase-2-tasks.md](docs/phases/phase-2-tasks.md).
-
-**Phase 2 attendance:** "I'm here" / "I'm leaving" / "I'm back", last-person-out closing checks (lamps, gas, doors), evening check for the chairman, and a Who's On page. See [docs/phases/phase-2-attendance.md](docs/phases/phase-2-attendance.md).
+| Docs | Presentation, progress report, handover, phase notes | [docs/](docs/) |
 
 ## Run it locally
 

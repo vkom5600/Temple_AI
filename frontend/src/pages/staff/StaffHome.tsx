@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { attendanceApi, tasksApi } from '../../api/endpoints'
+import { attendanceApi, notificationsApi, tasksApi } from '../../api/endpoints'
 import { useAuth } from '../../auth/AuthContext'
-import { fmtDay, fmtInline, fmtTime, greeting, isToday, longDate } from '../../lib/format'
-import { isFinished } from '../../lib/tasks'
+import { fmtDay, fmtInline, fmtTime, greeting, isToday, longDate, timeAgo } from '../../lib/format'
+import { byDue, isFinished } from '../../lib/tasks'
 import { useToast } from '../../components/Toast'
 import { ErrorNote, Icon, Spinner } from '../../components/ui'
 import { Mandala } from '../../components/Ornaments'
 import { HistoryDialog, LeavingSheet } from '../../components/attendance/CheckInCard'
 import ProblemSheet from '../../components/tasks/ProblemSheet'
 import VerifyList from '../../components/tasks/VerifyList'
-import type { ClosingChecks, MyAttendance, Task } from '../../types'
+import type { AppNotification, ClosingChecks, MyAttendance, Task } from '../../types'
 
 // Staff phone app: M1 Arriving and M2 Your tasks today (designs: screens/33_M1, 34_M2).
 // One scrolling page. Tasks unlock once you tap "I'm here"; "I'm leaving" checks you out.
@@ -29,6 +29,15 @@ export default function StaffHome() {
   const loadTasks = useCallback(() => {
     tasksApi.list().then((r) => setTasks(r.tasks)).catch((e: Error) => setError(e.message))
   }, [])
+  // H3 Broadcast: the newest unread message from the chairman/committee, at the top (M2 "Message from Raghu")
+  const [message, setMessage] = useState<AppNotification | null>(null)
+  useEffect(() => {
+    notificationsApi.list()
+      .then((r) => setMessage(r.notifications.find((n) => !n.is_read && n.notification_type.startsWith('broadcast')) ?? null))
+      .catch(() => {})
+  }, [])
+  const gotIt = () => { if (message) notificationsApi.markRead(message.id).catch(() => {}); setMessage(null) }
+
   const loadMe = useCallback(() => {
     attendanceApi.me().then(setMe).catch((e: Error) => setError(e.message))
   }, [])
@@ -54,11 +63,11 @@ export default function StaffHome() {
   }
 
   const order = (a: Task, b: Task) =>
-    Number(isFinished(a)) - Number(isFinished(b)) || new Date(a.due_at).getTime() - new Date(b.due_at).getTime()
-  const today = (tasks ?? []).filter((t) => isToday(t.due_at) || t.is_overdue || t.status === 'flagged').sort(order)
+    Number(isFinished(a)) - Number(isFinished(b)) || byDue(a, b)
+  const today = (tasks ?? []).filter((t) => !t.due_at || isToday(t.due_at) || t.is_overdue || t.status === 'flagged').sort(order)
   const later = (tasks ?? []).filter((t) => !today.includes(t) && t.status === 'todo').sort(order)
   const done = today.filter(isFinished).length
-  const next = today.find((t) => t.status === 'todo')
+  const next = today.find((t) => t.status === 'todo' && t.due_at)
 
   const record = me?.today
   const onSite = !!me?.on_site
@@ -98,6 +107,16 @@ export default function StaffHome() {
           <Icon name="check" size={30} />
           <span><b>{absent ? "I'm here after all" : "I'm here"}</b><span>Tap when you arrive</span></span>
         </button>
+      )}
+
+      {message && (
+        <div className={`msg-card ${message.notification_type === 'broadcast_urgent' ? 'urgent' : ''}`} role="status">
+          <div className="msg-head">
+            <span><Icon name="bell" size={16} /> {message.title} · {timeAgo(message.created_at)}</span>
+            <button className="btn btn-outline btn-sm" onClick={gotIt}>Got it</button>
+          </div>
+          <p>{message.message}</p>
+        </div>
       )}
 
       <ErrorNote>{error}</ErrorNote>
@@ -151,7 +170,7 @@ export default function StaffHome() {
         <LeavingSheet
           me={me}
           busy={busy}
-          unfinished={today.filter((t) => t.status === 'todo').map((t) => `${t.title} (by ${fmtTime(t.due_at)})`)}
+          unfinished={today.filter((t) => t.status === 'todo').map((t) => t.due_at ? `${t.title} (by ${fmtTime(t.due_at)})` : t.title)}
           onClose={() => setLeaving(false)}
           onLeave={(closing?: ClosingChecks) => run(() => attendanceApi.leave(closing), () => setLeaving(false))}
         />
@@ -180,7 +199,7 @@ function TaskCard({ task: t, locked, busy, run, onProblem }: {
       <div className="txt">
         <div className="t">{t.title}</div>
         <div className="m">
-          {late ? <b className="red">Was due {fmtInline(t.due_at)}</b> : `By ${fmtTime(t.due_at)}`}
+          {late ? <b className="red">Was due {fmtInline(t.due_at)}</b> : t.due_at ? `By ${fmtTime(t.due_at)}` : 'Any time'}
           {t.area && ` · ${t.area}`}
           {t.requires_verification && ' · Safety'}
           {t.assigned_group && ' · shared'}

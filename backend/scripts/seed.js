@@ -56,7 +56,7 @@ export async function seedDemoData(pool) {
 // always a mix of done, upcoming, overdue, waiting for sign-off and couldn't-do.
 // Only runs when the tasks table is empty.
 const DEMO_TASKS = [
-    // [title, category, area, group or email, minutes from now, extras]
+    // [title, category, area, group or email, minutes from now (null = no deadline), extras]
     ["Open the temple and light the lamps", "Puja & rituals", "Main Mandir", "priest", -240, { done: "anil", repeat: "daily" }],
     ["Morning puja and aarti", "Puja & rituals", "Main Mandir", "priest", -180, { done: "anil", repeat: "daily" }],
     ["Prepare items for evening aarti", "Puja & rituals", "Main Mandir", "priest", 90, { repeat: "daily" }],
@@ -72,7 +72,10 @@ const DEMO_TASKS = [
     ["Fix the leaking tap in the kitchen", "Maintenance", "Kitchen", "harish@temple.demo", -2 * 24 * 60, { priority: "high" }],
     ["Restock puja supplies (ghee, camphor, flowers)", "General", "Main Mandir", "caretaker", 60, {}],
     ["Welcome visitors at evening aarti", "General", "Main Mandir", "volunteer", 150, { repeat: "daily" }],
-    ["Reply to member about stall request", "Admin & committee", "Community Hall", "raghu@temple.demo", -26 * 60, {}]
+    ["Reply to member about stall request", "Admin & committee", "Community Hall", "raghu@temple.demo", -26 * 60, {}],
+    // No deadline ("any time"), as in designs M2 and T2
+    ["Polish the brass lamps", "Puja & rituals", "Main Mandir", "priest", null, {}],
+    ["Repaint side gate", "Maintenance", "Whole compound", "harish@temple.demo", null, {}]
 ];
 
 export async function seedDemoTasks(pool) {

@@ -39,6 +39,7 @@ export default function TaskForm({ title = 'New task', initial = {}, showTemplat
     recurrence: (initial.recurrence ?? 'none') as Recurrence,
     date: toDateInput(due),
     time: toTimeInput(due),
+    noDeadline: initial.due_at === null, // "No deadline" (T3): shows as "Any time" on phones
   })
   const [category, setCategory] = useState(knownCategory(initial.category) ? initial.category! : initial.category ? 'Other' : 'General')
   const [otherCategory, setOtherCategory] = useState(knownCategory(initial.category) ? '' : initial.category ?? '')
@@ -75,7 +76,7 @@ export default function TaskForm({ title = 'New task', initial = {}, showTemplat
   }
 
   const finalCategory = category === 'Other' ? otherCategory.trim() : category
-  const canSave = form.title.trim() && assignees.length > 0 && finalCategory && form.date && form.time && !busy
+  const canSave = form.title.trim() && assignees.length > 0 && finalCategory && (form.noDeadline || (form.date && form.time)) && !busy
 
   const submit = async () => {
     setError('')
@@ -88,7 +89,7 @@ export default function TaskForm({ title = 'New task', initial = {}, showTemplat
       priority: form.priority,
       requires_verification: form.requires_verification,
       recurrence: form.recurrence,
-      due_at: new Date(`${form.date}T${form.time}`).toISOString(),
+      due_at: form.noDeadline ? null : new Date(`${form.date}T${form.time}`).toISOString(),
     }
     try {
       await onSubmit(assignees.map((key) => ({ ...base, ...fromKey(key) })))
@@ -223,17 +224,26 @@ export default function TaskForm({ title = 'New task', initial = {}, showTemplat
         <div className="col">
           <span className="ulabel">Options</span>
           <div className="field">
-            <span className="label">Deadline</span>
-            <div className="grid-2f">
-              <label className="with-ic"><Icon name="calendar" /><input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} aria-label="Date" /></label>
-              <label className="with-ic"><Icon name="clock" /><input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} aria-label="Time" /></label>
-            </div>
+            <span className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="label">Deadline</span>
+              <label className="row muted small" style={{ gap: 6, cursor: 'pointer' }} title={form.recurrence !== 'none' ? 'Repeating tasks need a time' : undefined}>
+                <input type="checkbox" style={{ width: 16, height: 16, minHeight: 0 }} checked={form.noDeadline} disabled={form.recurrence !== 'none'} onChange={(e) => set('noDeadline', e.target.checked)} /> No deadline
+              </label>
+            </span>
+            {form.noDeadline ? (
+              <span className="muted small" style={{ padding: '12px 0' }}>Shows as "Any time" on their phone until it's done.</span>
+            ) : (
+              <div className="grid-2f">
+                <label className="with-ic"><Icon name="calendar" /><input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} aria-label="Date" /></label>
+                <label className="with-ic"><Icon name="clock" /><input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} aria-label="Time" /></label>
+              </div>
+            )}
           </div>
           <div className="field">
             <span className="label">Repeat</span>
             <div className="segmented">
               {(['none', 'daily', 'weekly'] as Recurrence[]).map((r) => (
-                <button key={r} type="button" className={form.recurrence === r ? 'on' : ''} onClick={() => set('recurrence', r)}>
+                <button key={r} type="button" className={form.recurrence === r ? 'on' : ''} onClick={() => { set('recurrence', r); if (r !== 'none') set('noDeadline', false) }}>
                   {r === 'none' ? 'None' : r === 'daily' ? 'Daily' : 'Weekly'}
                 </button>
               ))}

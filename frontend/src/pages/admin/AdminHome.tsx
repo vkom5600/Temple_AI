@@ -2,9 +2,9 @@ import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { tasksApi } from '../../api/endpoints'
-import { longDate } from '../../lib/format'
+import { fmtDay, longDate } from '../../lib/format'
 import { topTip, useInbox } from '../../lib/inbox'
-import { assigneeLabel, isFinished } from '../../lib/tasks'
+import { assigneeLabel, byDue, dueMs, hhmm, isFinished } from '../../lib/tasks'
 import { actionCount, useAdminContext } from '../../layouts/AdminLayout'
 import { useToast } from '../../components/Toast'
 import { ErrorNote, Icon, Spinner } from '../../components/ui'
@@ -12,7 +12,6 @@ import CheckInCard from '../../components/attendance/CheckInCard'
 import InboxRow from '../../components/InboxRow'
 import ConvertIssueForm from '../../components/tasks/ConvertIssueForm'
 import TaskDetails from '../../components/tasks/TaskDetails'
-import TaskForm from '../../components/tasks/TaskForm'
 import type { Issue, Task } from '../../types'
 
 // H1 Home (design: screens/01_H1_home.png): what needs attention and today at the mandir.
@@ -22,16 +21,17 @@ const SHOW_MAX = 4
 export default function AdminHome() {
   const { user } = useAuth()
   const toast = useToast()
-  const { summary, refreshSummary } = useAdminContext()
+  const { summary, refreshSummary, openBroadcast, openAskAi } = useAdminContext()
   const isChairman = user?.role === 'chairman'
   const { inbox, error, reload } = useInbox(isChairman)
   const [today, setToday] = useState<Task[] | null>(null)
-  const [creating, setCreating] = useState(false)
   const [viewing, setViewing] = useState<number | null>(null)
   const [converting, setConverting] = useState<Issue | null>(null)
 
+  const [upcoming, setUpcoming] = useState<Task[]>([])
   const loadToday = useCallback(() => {
     tasksApi.list({ view: 'today' }).then((r) => setToday(r.tasks)).catch(() => setToday([]))
+    tasksApi.list({ view: 'open' }).then((r) => setUpcoming(r.tasks)).catch(() => {})
   }, [])
   useEffect(loadToday, [loadToday])
 
@@ -51,6 +51,9 @@ export default function AdminHome() {
   const items = inbox?.items ?? []
   const tip = topTip(items)
   const waiting = actionCount(summary, isChairman)
+  const nextTask = today?.filter((t) => t.status === 'todo' && t.due_at && dueMs(t) > Date.now()).sort(byDue)[0]
+  const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999)
+  const comingUp = upcoming.filter((t) => t.due_at && dueMs(t) > endOfToday.getTime()).sort(byDue)[0]
 
   return (
     <div className="page">
@@ -60,12 +63,19 @@ export default function AdminHome() {
           <div className="home-sub">
             <span>{longDate()}</span>
             {day && (
-              <span className={`pill ${here ? 'pill-grn' : 'pill-soft'}`}><span className="dot" /> {here ? `${here} on site now` : 'Nobody on site yet'}</span>
+              <span className={`pill ${here ? 'pill-soft' : 'pill-soft'}`}>
+                <span className="dot" style={{ color: here ? 'var(--green-mid)' : '#b0adb8' }} /> {here ? `Mandir open · ${here} on site` : 'Nobody checked in yet'}
+                {nextTask && ` · next task ${hhmm(nextTask.due_at)}`}
+              </span>
             )}
           </div>
+          {comingUp && (
+            <Link to="/admin/tasks?tab=upcoming" className="coming-up">Coming up: {comingUp.title} · {fmtDay(comingUp.due_at)} <Icon name="arrow-right" size={15} /></Link>
+          )}
         </div>
         <div className="head-actions">
-          <button className="btn btn-primary btn-lg" onClick={() => setCreating(true)}><Icon name="plus" size={18} /> New task</button>
+          <button className="btn btn-primary btn-lg" onClick={openAskAi}><span className="star">✦</span> Plan with AI</button>
+          <button className="btn btn-outline btn-lg" onClick={openBroadcast}><Icon name="send" size={17} /> Broadcast</button>
         </div>
       </header>
 
@@ -131,19 +141,6 @@ export default function AdminHome() {
         </div>
       </div>
 
-      {creating && (
-        <TaskForm
-          showTemplates
-          allowMany
-          onClose={() => setCreating(false)}
-          onSubmit={async (inputs) => {
-            const r = await tasksApi.create(inputs)
-            toast(r.message)
-            setCreating(false)
-            changed()
-          }}
-        />
-      )}
       {viewing && <TaskDetails taskId={viewing} onClose={() => setViewing(null)} onChanged={changed} />}
       {converting && <ConvertIssueForm issue={converting} onClose={() => setConverting(null)} onDone={(m) => { toast(m); setConverting(null); changed() }} />}
     </div>
@@ -178,10 +175,10 @@ function TasksCard({ today, overdue }: { today: Task[] | null; overdue: number }
 // "Today at the mandir": today's timings as a timeline, with a line for now.
 // Bookings and puja times join this list when the calendar is built (Phase 3).
 function TodaySchedule({ tasks, onOpen }: { tasks: Task[] | null; onOpen: (id: number) => void }) {
-  const list = [...(tasks ?? [])].filter((t) => t.status !== 'cancelled').sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime())
+  const list = [...(tasks ?? [])].filter((t) => t.status !== 'cancelled').sort(byDue)
   const now = Date.now()
-  const nowIndex = list.findIndex((t) => new Date(t.due_at).getTime() > now)
-  const nextId = list.find((t) => new Date(t.due_at).getTime() > now && t.status === 'todo')?.id
+  const nowIndex = list.findIndex((t) => dueMs(t) > now)
+  const nextId = list.find((t) => t.due_at && dueMs(t) > now && t.status === 'todo')?.id
   const countdown = (iso: string) => {
     const mins = Math.round((new Date(iso).getTime() - now) / 60000)
     return mins < 60 ? `in ${mins} min` : `in ${Math.floor(mins / 60)}h ${mins % 60}m`
@@ -189,17 +186,17 @@ function TodaySchedule({ tasks, onOpen }: { tasks: Task[] | null; onOpen: (id: n
   const nowLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 
   const row = (t: Task) => {
-    const past = new Date(t.due_at).getTime() <= now
+    const past = dueMs(t) <= now
     const state = isFinished(t) ? 'done' : t.is_overdue ? 'late' : t.requires_verification ? 'safety' : ''
     return (
       <li key={t.id} className={`${past ? 'past' : ''} ${t.id === nextId ? 'next-up' : ''}`}>
         <span className={`sched-dot ${state}`}>{state === 'done' && <Icon name="check" size={12} />}{t.id === nextId && <Icon name="bell" size={12} />}</span>
-        <span className="sched-time">{new Date(t.due_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+        <span className={`sched-time ${t.due_at ? '' : 'any'}`}>{t.due_at ? hhmm(t.due_at) : 'Any time'}</span>
         <button className="sched-what" onClick={() => onOpen(t.id)}>
           {t.id === nextId && <span className="tag-mini">Next</span>}
           {t.title}
           <small>{assigneeLabel(t)}{state === 'late' ? ' · late' : ''}</small>
-          {t.id === nextId && <span className="countdown">{countdown(t.due_at)}</span>}
+          {t.id === nextId && <span className="countdown">{countdown(t.due_at!)}</span>}
         </button>
         {t.area && <span className="sched-where">{t.area}</span>}
       </li>

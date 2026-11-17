@@ -1,6 +1,6 @@
 import { api } from './client'
 import type {
-  AttendanceDay, AttendanceInput, ClosingChecks, MyAttendance,
+  AttendanceDay, AttendanceInput, AuditEntry, BroadcastAudience, ClosingChecks, MyAttendance,
   AppNotification, AuthUser, Issue, RegisterInput, Setting, Task, TaskComment, TaskInput, TaskSummary, TaskView, User, UserInput,
 } from '../types'
 
@@ -34,6 +34,17 @@ export const notificationsApi = {
   unreadCount: () => api<{ unreadCount: number }>('/notifications/unread-count'),
   markRead: (id: number) => api(`/notifications/${id}/read`, { method: 'PATCH' }),
   markAllRead: () => api('/notifications/read-all', { method: 'PATCH' }),
+  // H3 Broadcast (chairman, committee)
+  broadcast: (input: { audience: BroadcastAudience; designations: string[]; message: string; urgent: boolean }) =>
+    api<{ count: number; message: string }>('/notifications/broadcast', { method: 'POST', body: input }),
+}
+
+// R2 Activity log (chairman, committee)
+export const auditApi = {
+  list: (params: { entity_type?: string; q?: string; limit?: number; offset?: number } = {}) => {
+    const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])).toString()
+    return api<{ auditLogs: AuditEntry[]; count: number }>(`/audit-logs${query ? `?${query}` : ''}`)
+  },
 }
 
 type TaskResult = { task: Task; message: string }

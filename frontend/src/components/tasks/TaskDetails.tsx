@@ -95,7 +95,7 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
   const review = task?.status === 'awaiting_signoff'
   const ownWork = task?.completed_by === user?.id
   const open = task && ['todo', 'flagged'].includes(task.status)
-  const onTime = task?.completed_at && new Date(task.completed_at) <= new Date(task.due_at)
+  const onTime = task?.completed_at && (!task.due_at || new Date(task.completed_at) <= new Date(task.due_at))
   const note = task && comments.find((c) => c.comment_type === 'comment' && c.user_id === task.completed_by)
 
   const footer = task && (

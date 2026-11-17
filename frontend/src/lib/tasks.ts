@@ -29,3 +29,9 @@ export function suggestedTitle(text: string): string {
   const clean = text.replace(/\s+/g, ' ').trim()
   return 'Follow up: ' + (clean.length > 50 ? clean.slice(0, 50) + '…' : clean)
 }
+
+// Deadlines are optional ("any time"). Sort those last, and never call them late.
+export const dueMs = (t: Pick<Task, 'due_at'>) => (t.due_at ? new Date(t.due_at).getTime() : Number.POSITIVE_INFINITY)
+export const byDue = (a: Pick<Task, 'due_at'>, b: Pick<Task, 'due_at'>) => dueMs(a) - dueMs(b)
+// "16:30" (24-hour, as in the designs), or "Any time"
+export const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : 'Any time')

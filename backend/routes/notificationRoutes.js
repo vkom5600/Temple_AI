@@ -10,12 +10,18 @@ import {
 } from "../controllers/notificationController.js";
 
 import {
-  authenticateToken
+  authenticateToken,
+  authorizeRoles,
+  ADMIN_ROLES
 } from "../middleware/authMiddleware.js";
+import { sendBroadcast } from "../controllers/broadcastController.js";
 
 const router = express.Router();
 
 router.use(authenticateToken);
+
+// H3 Broadcast: chairman and committee message staff / volunteer phones
+router.post("/broadcast", authorizeRoles(...ADMIN_ROLES), sendBroadcast);
 
 // Get all notifications for the logged-in user
 router.get("/", getNotifications);

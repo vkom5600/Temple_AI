@@ -33,7 +33,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onConvert, 
 
   if (item.kind === 'overdue' && task) {
     const mine = task.assigned_to === myId
-    const days = Math.floor((Date.now() - new Date(task.due_at).getTime()) / 86_400_000)
+    const days = Math.floor((Date.now() - new Date(task.due_at!).getTime()) / 86_400_000) // overdue tasks always have a time
     return (
       <div className="attn-row">
         <span className="tile-ic ic-red"><Icon name={task.requires_verification ? 'shield' : 'alarm'} size={20} /></span>
@@ -42,7 +42,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onConvert, 
           <div className="attn-meta">
             {task.requires_verification && <span>Safety ·</span>}
             <span>{assigneeLabel(task)}</span>
-            <span className="pill pill-red">Overdue {lateBy(task.due_at)}</span>
+            <span className="pill pill-red">Overdue {lateBy(task.due_at!)}</span>
           </div>
           {task.requires_verification ? (
             <span className="hint"><span className="star">✦</span> Safety task, so it goes first</span>

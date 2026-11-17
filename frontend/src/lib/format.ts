@@ -26,12 +26,14 @@ export const longDate = (date = new Date()): string =>
 
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
-export const isToday = (iso: string) => sameDay(new Date(iso), new Date())
+export const isToday = (iso: string | null) => !!iso && sameDay(new Date(iso), new Date())
 
-export const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+// null = a task with no deadline
+export const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Any time')
 
 // "Today", "Tomorrow", "Yesterday", or "Sat 31 Oct"
-export function fmtDay(iso: string): string {
+export function fmtDay(iso: string | null): string {
+  if (!iso) return 'Any day'
   const d = new Date(iso)
   const offset = (days: number) => { const x = new Date(); x.setDate(x.getDate() + days); return x }
   if (sameDay(d, offset(0))) return 'Today'
@@ -40,10 +42,11 @@ export function fmtDay(iso: string): string {
   return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-export const fmtWhen = (iso: string) => `${fmtDay(iso)}, ${fmtTime(iso)}`
+export const fmtWhen = (iso: string | null) => (iso ? `${fmtDay(iso)}, ${fmtTime(iso)}` : 'No deadline')
 
 // For use inside a sentence: "today at 2:00 pm", "on Sat 31 Oct at 2:00 pm"
-export function fmtInline(iso: string): string {
+export function fmtInline(iso: string | null): string {
+  if (!iso) return 'with no deadline'
   const day = fmtDay(iso)
   return ['Today', 'Tomorrow', 'Yesterday'].includes(day) ? `${day.toLowerCase()} at ${fmtTime(iso)}` : `on ${day} at ${fmtTime(iso)}`
 }

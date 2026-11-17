@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { tasksApi } from '../../api/endpoints'
 import { TASK_GROUP_LABELS } from '../../constants'
 import { fmtTime, fmtWhen } from '../../lib/format'
-import { assigneeLabel, isFinished, repeatLabel } from '../../lib/tasks'
+import { assigneeLabel, byDue, dueMs, isFinished, repeatLabel } from '../../lib/tasks'
 import { useAdminContext } from '../../layouts/AdminLayout'
 import { useToast } from '../../components/Toast'
 import { Empty, ErrorNote, Icon, Spinner } from '../../components/ui'
@@ -22,12 +22,11 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'all', label: 'All' },
 ]
 
-const byDue = (a: Task, b: Task) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime()
 const endOfToday = () => { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime() }
 
 export default function TasksPage() {
   const toast = useToast()
-  const { refreshSummary } = useAdminContext()
+  const { refreshSummary, openBroadcast } = useAdminContext()
   const [params, setParams] = useSearchParams()
   const tab = (params.get('tab') as Tab) || 'today'
   const [group, setGroup] = useState('')
@@ -72,13 +71,14 @@ export default function TasksPage() {
     (!person || t.assigned_to_name === person) &&
     (!q || `${t.title} ${t.area ?? ''} ${t.assigned_to_name ?? ''} ${t.category}`.toLowerCase().includes(q)),
   )
-  const later = tab === 'upcoming' ? list.filter((t) => new Date(t.due_at).getTime() > endOfToday() && t.status === 'todo') : []
+  const later = tab === 'upcoming' ? list.filter((t) => t.due_at && dueMs(t) > endOfToday() && t.status === 'todo') : []
 
   const needs = list.filter((t) => (t.status === 'todo' && t.is_overdue) || t.status === 'flagged')
   const review = list.filter((t) => t.status === 'awaiting_signoff')
   const todo = list.filter((t) => t.status === 'todo' && !t.is_overdue)
   const done = list.filter((t) => t.status === 'done')
-  const todayTotal = list.filter((t) => new Date(t.due_at).getTime() <= endOfToday() && new Date(t.due_at).toDateString() === new Date().toDateString())
+  // Due today, or "any time" (no deadline)
+  const todayTotal = list.filter((t) => !t.due_at || new Date(t.due_at).toDateString() === new Date().toDateString())
   const todayDone = todayTotal.filter(isFinished).length
 
   const setTab = (id: Tab) => {
@@ -96,6 +96,7 @@ export default function TasksPage() {
           <p>Assign work, track it, sign it off.</p>
         </div>
         <div className="head-actions">
+          <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>
           <button className="btn btn-primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} /> New task</button>
         </div>
       </header>
@@ -227,7 +228,7 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
 }) {
   const late = t.status === 'todo' && t.is_overdue
   const name = t.assigned_to_name
-  const when = showDay ? fmtWhen(t.due_at) : `due ${fmtTime(t.due_at)}`
+  const when = !t.due_at ? 'any time' : showDay ? fmtWhen(t.due_at) : `due ${fmtTime(t.due_at)}`
   return (
     <div className={`t-row ${late ? 'urgent' : ''} ${t.status === 'awaiting_signoff' ? 'review' : ''}`}>
       <span className="av">{name ? name[0].toUpperCase() : <Icon name="users" size={18} />}</span>
@@ -243,7 +244,7 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
           ) : (
             <span>· {when}</span>
           )}
-          {late && <span className="red-text">· {lateBy(t.due_at)} overdue</span>}
+          {late && <span className="red-text">· {lateBy(t.due_at!)} overdue</span>}
           {t.status === 'flagged' && <span className="saf-text">· ⚑ Couldn't do{t.last_comment && `: ${t.last_comment}`}</span>}
         </div>
       </div>

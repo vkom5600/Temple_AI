@@ -37,10 +37,11 @@ phase-1                 Phases 0 + 1
   └─ feature/tasks      + Tasks and Issues
        └─ feature/attendance   + Attendance + this handover
             (phase-2    the same commit as feature/attendance: "Phase 2 finished")
-            └─ feature/ui-design   + every Phase 1–2 screen rebuilt to the Stitch designs   ← the newest, has everything
+            └─ feature/ui-design   + every Phase 1–2 screen rebuilt to the Stitch designs
+                 (present-today   the same as feature/ui-design: the version to present)   ← use this one
 ```
 
-Each branch is built on the one above it. **To see or run everything, use the newest one, `feature/ui-design`.**
+Each branch is built on the one above it. **To see or run everything, use `present-today`.** Presenting? Start with `docs/PRESENTATION.md`.
 
 **Merge order into `main`** (after review): `phase-1` → `feature/tasks` → `feature/attendance` → `feature/ui-design`. Merging in that order gives no conflicts.
 
@@ -203,7 +204,11 @@ Browser (React + TypeScript)  ──/api──►  Express API (Node.js, JavaScr
 | 17 | Phase 3/4 routes switched off until built | They crash without API keys and need tables that don't exist yet |
 | 18 | **Stitch design system**: indigo + saffron + green from the VHP logo and website, Inter font, VHP logo everywhere; a faded gopuram behind pages for a temple feel | The agreed designs (front-end final review). The gopuram can be removed in one line if the committee prefers |
 | 19 | Temple name and logo in one place (`frontend/src/branding.ts`, `public/vhp-logo.png`) | "Ilford Hindu Centre · Vishwa Hindu Parishad (UK)", as in the designs |
-| 20 | Suggestions ("✦ …") and "Assign Harish" are rule-based until the AI assistant | Useful now; Phase 3 swaps in Temple AI. Calendar = Google Calendar (Phase 3) |
+| 20 | Suggestions ("✦ …"), "Assign Harish", Ask AI answers and the weekly report are rule-based on live data until Temple AI | Useful now; Phase 3 swaps in Claude. Calendar = Google Calendar (Phase 3) |
+| 21 | Tasks can have **no deadline** ("Any time"); repeating tasks still need a time (migration 004) | Designs T3/T4/M2 |
+| 22 | Broadcast = a notification of type `broadcast` / `broadcast_urgent`; the newest unread shows on staff phones | Design H3 + M2 "Message from Raghu" |
+| 23 | Megha's draft audit-log controller switched on at `/api/audit-logs` (with names and search added) | Powers R2 Activity log |
+| 24 | Server accepts `DATABASE_URL` + `DB_SSL=true` for hosted databases | Needed for Neon/Supabase deployment (docs/PRESENTATION.md section 5) |
 
 ---
 

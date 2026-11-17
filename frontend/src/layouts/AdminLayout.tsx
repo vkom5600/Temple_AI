@@ -5,14 +5,20 @@ import { tasksApi } from '../api/endpoints'
 import { BRAND } from '../branding'
 import { ROLE_LABELS } from '../constants'
 import NotificationBell from '../components/NotificationBell'
-import { Avatar, Icon, Modal, type IconName } from '../components/ui'
+import AskAiPanel from '../components/AskAiPanel'
+import BroadcastDialog from '../components/BroadcastDialog'
+import { Avatar, Icon, type IconName } from '../components/ui'
 import { Gopuram } from '../components/Ornaments'
+import PhoneNeedsYou from '../pages/admin/PhoneNeedsYou'
 import type { TaskSummary } from '../types'
 
-// Shared with admin pages through <Outlet context>: today's numbers + a refresh.
+// Shared with admin pages through <Outlet context>: today's numbers, a refresh,
+// and the two panels every page can open (H3 Broadcast, AI1 Ask AI).
 interface AdminContext {
   summary: TaskSummary | null
   refreshSummary: () => void
+  openBroadcast: () => void
+  openAskAi: () => void
 }
 export const useAdminContext = () => useOutletContext<AdminContext>()
 
@@ -22,7 +28,6 @@ export const actionCount = (s: TaskSummary | null, isChairman: boolean) =>
   s ? s.overdue + s.open_issues + s.awaiting_signoff + (isChairman ? s.pending_registrations : 0) : 0
 
 // The admin web app sidebar, as in the designs (H1, AC1, T1, C1, P1, R1).
-// Calendar (Google Calendar) and Reports fill in during Phases 3–4; Ask AI in Phase 3.
 const NAV: { to: string; label: string; icon: IconName; action?: boolean }[] = [
   { to: '/admin', label: 'Home', icon: 'grid' },
   { to: '/admin/action-center', label: 'Action Center', icon: 'bell', action: true },
@@ -33,13 +38,28 @@ const NAV: { to: string; label: string; icon: IconName; action?: boolean }[] = [
 ]
 
 const REFRESH_MS = 60_000
+const PHONE = '(max-width: 760px)'
+
+// Rao garu's phone: on a phone, Home and the Action Center become "Needs you" (AC1 phone).
+function useIsPhone() {
+  const [phone, setPhone] = useState(() => window.matchMedia(PHONE).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(PHONE)
+    const on = () => setPhone(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return phone
+}
 
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const isPhone = useIsPhone()
   const [summary, setSummary] = useState<TaskSummary | null>(null)
   const [menu, setMenu] = useState(false)
   const [asking, setAsking] = useState(false)
+  const [broadcasting, setBroadcasting] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const refreshSummary = useCallback(() => {
@@ -59,10 +79,34 @@ export default function AdminLayout() {
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [menu])
+  // ⌘K / Ctrl+K opens Ask AI, as in the design
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setAsking(true) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   if (!user) return null
   const isChairman = user.role === 'chairman'
   const waiting = actionCount(summary, isChairman)
+  const context: AdminContext = { summary, refreshSummary, openBroadcast: () => setBroadcasting(true), openAskAi: () => setAsking(true) }
+  const panels = (
+    <>
+      {asking && <AskAiPanel onClose={() => setAsking(false)} />}
+      {broadcasting && <BroadcastDialog onClose={() => setBroadcasting(false)} />}
+    </>
+  )
+
+  if (isPhone && ['/admin', '/admin/', '/admin/action-center'].includes(location.pathname)) {
+    return (
+      <>
+        <PhoneNeedsYou context={context} />
+        {panels}
+      </>
+    )
+  }
 
   return (
     <div className="admin">
@@ -84,11 +128,13 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-        <button className="ask-ai" onClick={() => setAsking(true)}><span className="star">✦</span> Ask AI</button>
+        <button className="ask-ai" onClick={() => setAsking(true)}>
+          <span className="star">✦</span> <span className="grow" style={{ textAlign: 'left' }}>Ask AI</span> <kbd>⌘K</kbd>
+        </button>
         <div className="sidebar-foot" ref={menuRef}>
           {menu && (
             <div className="me-menu" role="menu">
-              <Link to="/admin/attendance" role="menuitem"><Icon name="clock" /> Attendance (Who's on)</Link>
+              <Link to="/admin/attendance" role="menuitem"><Icon name="clock" /> Attendance records</Link>
               <Link to="/admin/issues" role="menuitem"><Icon name="flag" /> Issue history</Link>
               {isChairman && <Link to="/admin/settings" role="menuitem"><Icon name="settings" /> Settings</Link>}
               <button role="menuitem" onClick={logout}><Icon name="logout" /> Sign out</button>
@@ -107,27 +153,9 @@ export default function AdminLayout() {
 
       <main className="admin-main">
         <Gopuram className="page-watermark" />
-        <Outlet context={{ summary, refreshSummary } satisfies AdminContext} />
+        <Outlet context={context} />
       </main>
-      {asking && <AskAi onClose={() => setAsking(false)} />}
+      {panels}
     </div>
-  )
-}
-
-// AI1 Ask AI (design: screens/32_AI1). Answers only from the areas the person can see.
-// The Claude connection is Phase 3; this panel shows what it will do.
-const EXAMPLES = ['What is still not done today?', 'Who is on site right now?', 'Plan Diwali tasks from last year', 'Which safety checks are waiting?']
-
-function AskAi({ onClose }: { onClose: () => void }) {
-  return (
-    <Modal title="Ask AI" size="drawer" subtitle="Ask about tasks, people and the temple day. Answers only use what you're allowed to see." onClose={onClose}>
-      <div className="ai-banner"><span className="star">✦</span> Temple AI is connected in Phase 3. Until then, the Action Center and Home show the same answers.</div>
-      <span className="ulabel">Try asking</span>
-      <div className="chips">{EXAMPLES.map((q) => <span key={q} className="chip">{q}</span>)}</div>
-      <div className="row" style={{ marginTop: 'auto', flexWrap: 'nowrap' }}>
-        <input disabled placeholder="Ask Temple AI…" aria-label="Ask Temple AI" />
-        <button className="btn btn-primary" disabled><Icon name="send" size={16} /></button>
-      </div>
-    </Modal>
   )
 }

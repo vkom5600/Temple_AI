@@ -104,8 +104,15 @@ export const getTasks = async (req, res) => {
             all: "t.status <> 'cancelled'"
         };
         if (view === "today") {
-            // Everything due today in temple time (the dashboard's ring and lanes).
-            add("t.status <> 'cancelled' AND (t.due_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date", TIMEZONE);
+            // Everything due today in temple time, plus "any time" tasks (no deadline)
+            // that are still open or were finished today.
+            add(
+                `t.status <> 'cancelled' AND (
+                    (t.due_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date
+                    OR (t.due_at IS NULL AND (t.status IN ('todo', 'awaiting_signoff', 'flagged')
+                        OR (t.completed_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date)))`,
+                TIMEZONE
+            );
         } else if (view === "mine") {
             // The admin's own open tasks ("Your follow-ups"): to them, or to their role.
             add(assignedToMeSql(1), user.id, user.role, user.designation);
@@ -122,7 +129,7 @@ export const getTasks = async (req, res) => {
         add(assignedToMeSql(1), user.id, user.role, user.designation);
         add(
             `t.status <> 'cancelled'
-             AND t.due_at < NOW() + INTERVAL '8 days'
+             AND (t.due_at IS NULL OR t.due_at < NOW() + INTERVAL '8 days')
              AND (t.status IN ('todo', 'flagged', 'awaiting_signoff')
                   OR (t.completed_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date)`,
             TIMEZONE
@@ -134,7 +141,7 @@ export const getTasks = async (req, res) => {
          LEFT JOIN users assignee_role ON assignee_role.id = t.assigned_to
          LEFT JOIN staff_profiles assignee_job ON assignee_job.user_id = t.assigned_to
          WHERE ${where.join(" AND ")}
-         ORDER BY t.due_at
+         ORDER BY t.due_at NULLS LAST
          LIMIT 500`,
         values
     );
@@ -155,7 +162,11 @@ export const getSummary = async (req, res) => {
             (SELECT COUNT(*)::int FROM users WHERE approval_status = 'pending')                   AS pending_registrations
          FROM (
             SELECT status, due_at,
-                   (due_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date AS today
+                   COALESCE((due_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date,
+                            -- "any time" tasks count while open, or if finished today
+                            status IN ('todo', 'awaiting_signoff', 'flagged')
+                            OR (completed_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date,
+                            FALSE) AS today
             FROM tasks
          ) t`,
         [TIMEZONE]

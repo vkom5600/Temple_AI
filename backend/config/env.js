@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config({ quiet: true });
 
-const required = ["DB_HOST", "DB_NAME", "DB_USER", "JWT_SECRET"];
+// A hosted database (Neon, Supabase, Render) gives one DATABASE_URL instead of DB_* parts.
+const required = process.env.DATABASE_URL ? ["JWT_SECRET"] : ["DB_HOST", "DB_NAME", "DB_USER", "JWT_SECRET"];
 const missing = required.filter((key) => !process.env[key]);
 
 if (missing.length) {
