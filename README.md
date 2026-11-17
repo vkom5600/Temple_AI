@@ -13,6 +13,8 @@ Web app for running the temple day to day: people, tasks, attendance, hall booki
 
 **Phase 2 (this branch):** tasks (assign to a person or a whole job, repeating tasks, safety sign-off by a second person, reminders) and issues (report a problem, "can't do this", resolve or turn into a task). See [docs/phases/phase-2-tasks.md](docs/phases/phase-2-tasks.md).
 
+**Phase 2 attendance:** "I'm here" / "I'm leaving" / "I'm back", last-person-out closing checks (lamps, gas, doors), evening check for the chairman, and a Who's On page. See [docs/phases/phase-2-attendance.md](docs/phases/phase-2-attendance.md).
+
 ## Run it locally
 
 You need Node 20+ and PostgreSQL 14+.

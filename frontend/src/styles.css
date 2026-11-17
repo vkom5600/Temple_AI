@@ -570,3 +570,19 @@ a.stat-link { color: inherit; text-decoration: none; }
 .comment-form input { flex: 1; }
 .comment-sent_back, .comment-flagged { color: var(--red); }
 .comment-system { color: var(--muted); }
+
+/* ---------- Phase 2 additions: attendance ---------- */
+.checkin-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.checkin-card.is-here { border-color: color-mix(in srgb, var(--green) 40%, var(--line)); }
+.checkin-state { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.checkin-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--line); flex: none; }
+.checkin-dot.on { background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+.checkin-optin { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.closing-check { display: flex; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; }
+.closing-check.on { border-color: var(--green); background: var(--green-soft); }
+.closing-check input { width: 22px; height: 22px; min-height: 0; accent-color: var(--green); }
+.history-list { list-style: none; padding: 0; margin: 0; }
+.history-list li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-2); }
+.date-nav { flex-wrap: nowrap; }
+.date-nav input { width: auto; }
+.setting-time { width: auto; }

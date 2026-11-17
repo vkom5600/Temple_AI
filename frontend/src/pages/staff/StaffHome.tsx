@@ -5,12 +5,14 @@ import { fmtDay, fmtInline, fmtTime, greeting, isToday, longDate, partOfDay } fr
 import { isFinished } from '../../lib/tasks'
 import { useToast } from '../../components/Toast'
 import { Badge, Empty, ErrorNote, Icon, Spinner } from '../../components/ui'
+import CheckInCard from '../../components/attendance/CheckInCard'
 import ProblemSheet from '../../components/tasks/ProblemSheet'
 import VerifyList from '../../components/tasks/VerifyList'
 import type { Task } from '../../types'
 
 // Mobile-first and deliberately simple: a tick list, and one way to report a problem.
 // Volunteers also get a Sign-offs tab for checking safety tasks.
+// The check-in card (I'm here / leaving / back) sits under the greeting.
 export default function StaffHome() {
   const { user } = useAuth()
   const [tab, setTab] = useState<'tasks' | 'signoffs'>('tasks')
@@ -43,6 +45,8 @@ export default function StaffHome() {
           {tasks && <span className="day-quiet">{today.length ? `${done} of ${today.length} tasks done` : 'Nothing on your list today'}</span>}
         </div>
       </section>
+
+      <CheckInCard />
 
       {canSignOff && (
         <div className="seg" role="tablist">

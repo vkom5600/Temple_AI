@@ -138,3 +138,58 @@ export async function seedDemoTasks(pool) {
 
     console.log(`Seeded ${DEMO_TASKS.length} demo tasks and 2 issues.`);
 }
+
+// Today: priest, cook, cleaner and security are in (matches the prototype);
+// caretaker, maintenance and volunteers are not, so Who's On shows gaps.
+// Yesterday: a full day, with Dev locking up and confirming the closing checks.
+export async function seedDemoAttendance(pool) {
+    const existing = await pool.query("SELECT 1 FROM attendance LIMIT 1");
+    if (existing.rowCount) {
+        console.log("Attendance already exists, demo attendance skipped.");
+        return;
+    }
+
+    const tz = process.env.TEMPLE_TIMEZONE || "Europe/London";
+    const ids = Object.fromEntries(
+        (await pool.query("SELECT id, email FROM users")).rows.map((u) => [u.email.split("@")[0], u.id])
+    );
+
+    // Arrived N minutes ago, but never before 00:01 today (temple time).
+    for (const [name, minutesAgo] of [["anil", 255], ["kamla", 200], ["ramesh", 150], ["dev", 90]]) {
+        await pool.query(
+            `INSERT INTO attendance (user_id, attendance_date, status, check_in, updated_by)
+             VALUES ($1, (NOW() AT TIME ZONE $2)::date, 'present',
+                     GREATEST(NOW() - make_interval(mins => $3),
+                              ((NOW() AT TIME ZONE $2)::date::timestamp AT TIME ZONE $2) + INTERVAL '1 minute'),
+                     $1)`,
+            [ids[name], tz, minutesAgo]
+        );
+    }
+
+    // Yesterday, local times
+    const yesterday = [
+        ["anil", "06:30", "13:00"], ["kamla", "08:00", "19:30"], ["ramesh", "07:00", "15:00"],
+        ["jaya", "09:00", "17:00"], ["harish", "10:00", "14:00"], ["priya", "17:00", "20:00"],
+        ["dev", "12:00", "21:10"]
+    ];
+    for (const [name, inAt, outAt] of yesterday) {
+        const last = name === "dev";
+        await pool.query(
+            `INSERT INTO attendance (user_id, attendance_date, status, check_in, check_out,
+                                     closing_checks, closing_confirmed_at, updated_by)
+             VALUES ($1, (NOW() AT TIME ZONE $2)::date - 1, 'present',
+                     ((((NOW() AT TIME ZONE $2)::date - 1) + $3::time) AT TIME ZONE $2),
+                     ((((NOW() AT TIME ZONE $2)::date - 1) + $4::time) AT TIME ZONE $2),
+                     $5, CASE WHEN $6 THEN ((((NOW() AT TIME ZONE $2)::date - 1) + $4::time) AT TIME ZONE $2) END,
+                     $1)`,
+            [ids[name], tz, inAt, outAt, last ? JSON.stringify({ lamps: true, gas: true, doors: true }) : null, last]
+        );
+    }
+    await pool.query(
+        `INSERT INTO attendance (user_id, attendance_date, status, notes, updated_by)
+         VALUES ($1, (NOW() AT TIME ZONE $2)::date - 1, 'absent', 'Unwell', $3)`,
+        [ids.vikram, tz, ids.raghu]
+    );
+
+    console.log("Seeded demo attendance for today and yesterday.");
+}

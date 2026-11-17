@@ -196,7 +196,10 @@ The prototype's charts, dashboard, bookings and assistant are still in `src/prot
 
 ---
 
-## 10. Merging with Mega's attendance branch
+## 10. Merging with the attendance branch
+
+Update: attendance was built on top of this branch (`feature/attendance`, migration `003_attendance.sql`), so there's no numbering clash. Merge `feature/tasks` first, then `feature/attendance`. The notes below are kept for reference.
+
 
 - Both branches add a migration. **Number them in merge order**: whichever merges second renames its file to `003_...`. Never two `002`s.
 - Both touch `server.js` (route lines), `seed.js` and `StaffHome.tsx` (her check-in card goes above "Today"). Expect small, easy conflicts there.

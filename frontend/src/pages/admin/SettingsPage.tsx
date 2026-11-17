@@ -7,6 +7,7 @@ import type { Setting } from '../../types'
 const HELP: Record<Setting['key'], string> = {
   registration_open: 'When off, the Register page says registration is closed.',
   login_alert_to_chairman: 'An email each time a committee member, staff or volunteer signs in.',
+  closing_time: "After this time, you're told if anyone is still checked in or nobody confirmed lamps, gas and doors.",
 }
 
 // Chairman only: the switches stored in the settings table.
@@ -20,11 +21,11 @@ export default function SettingsPage() {
     settingsApi.list().then((r) => setSettings(r.settings)).catch((e: Error) => setError(e.message))
   }, [])
 
-  const toggle = async (s: Setting) => {
+  const save = async (key: Setting['key'], value: boolean | string) => {
     setError('')
-    setSaving(s.key)
+    setSaving(key)
     try {
-      const r = await settingsApi.update(s.key, !s.value)
+      const r = await settingsApi.update(key, value)
       setSettings(r.settings)
       toast('Setting saved')
     } catch (err) {
@@ -52,16 +53,27 @@ export default function SettingsPage() {
               <div className="strong">{s.label}</div>
               <div className="muted small">{HELP[s.key]}</div>
             </div>
-            <button
-              role="switch"
-              aria-checked={s.value}
-              aria-label={s.label}
-              className={`switch ${s.value ? 'on' : ''}`}
-              disabled={saving === s.key}
-              onClick={() => toggle(s)}
-            >
-              <span className="switch-knob" />
-            </button>
+            {typeof s.value === 'boolean' ? (
+              <button
+                role="switch"
+                aria-checked={s.value}
+                aria-label={s.label}
+                className={`switch ${s.value ? 'on' : ''}`}
+                disabled={saving === s.key}
+                onClick={() => save(s.key, !s.value)}
+              >
+                <span className="switch-knob" />
+              </button>
+            ) : (
+              <input
+                type="time"
+                className="setting-time"
+                aria-label={s.label}
+                defaultValue={s.value}
+                disabled={saving === s.key}
+                onBlur={(e) => e.target.value && e.target.value !== s.value && save(s.key, e.target.value)}
+              />
+            )}
           </div>
         ))}
       </section>

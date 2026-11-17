@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  AttendanceDay, AttendanceInput, ClosingChecks, MyAttendance,
   AppNotification, AuthUser, Issue, RegisterInput, Setting, Task, TaskComment, TaskInput, TaskSummary, TaskView, User, UserInput,
 } from '../types'
 
@@ -24,7 +25,7 @@ export const usersApi = {
 
 export const settingsApi = {
   list: () => api<{ settings: Setting[] }>('/settings'),
-  update: (key: Setting['key'], value: boolean) =>
+  update: (key: Setting['key'], value: boolean | string) =>
     api<{ settings: Setting[] }>(`/settings/${key}`, { method: 'PUT', body: { value } }),
 }
 
@@ -67,4 +68,18 @@ export const issuesApi = {
   resolve: (id: number, note: string) => api<{ issue: Issue; message: string }>(`/issues/${id}/resolve`, { method: 'PATCH', body: { note } }),
   convert: (id: number, task: TaskInput) =>
     api<{ issue: Issue; task: Task; message: string }>(`/issues/${id}/convert`, { method: 'POST', body: task }),
+}
+
+type Mine = MyAttendance & { message: string }
+
+export const attendanceApi = {
+  me: () => api<MyAttendance>('/attendance/me'),
+  checkIn: () => api<Mine>('/attendance/check-in', { method: 'POST' }),
+  undoCheckIn: () => api<Mine>('/attendance/undo-check-in', { method: 'POST' }),
+  leave: (closing?: Partial<ClosingChecks>) => api<Mine>('/attendance/leave', { method: 'POST', body: { closing } }),
+  back: () => api<Mine>('/attendance/back', { method: 'POST' }),
+  day: (date?: string) => api<AttendanceDay>(`/attendance${date ? `?date=${date}` : ''}`),
+  save: (userId: number, date: string, input: AttendanceInput) =>
+    api<{ message: string }>(`/attendance/${userId}/${date}`, { method: 'PUT', body: input }),
+  remove: (userId: number, date: string) => api<{ message: string }>(`/attendance/${userId}/${date}`, { method: 'DELETE' }),
 }

@@ -23,6 +23,10 @@ export const updateSetting = async (req, res) => {
         return res.status(400).json({ success: false, message: "Value must be true or false" });
     }
 
+    if (definition.type === "time" && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+        return res.status(400).json({ success: false, message: "Time must be HH:MM (24-hour)" });
+    }
+
     await setSetting(key, value, req.user.id);
 
     await logAudit({

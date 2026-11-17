@@ -23,6 +23,7 @@ const NAV: { to: string; label: string; icon: IconName; count?: Count; chairmanO
   { to: '/admin/tasks', label: 'Tasks', icon: 'list', count: 'overdue' },
   { to: '/admin/issues', label: 'Issues', icon: 'flag', count: 'open_issues' },
   { to: '/admin/signoffs', label: 'Sign-offs', icon: 'shield', count: 'awaiting_signoff' },
+  { to: '/admin/attendance', label: "Who's on", icon: 'clock' },
   { to: '/admin/people', label: 'People', icon: 'users' },
   { to: '/admin/settings', label: 'Settings', icon: 'shield', chairmanOnly: true },
 ]

@@ -74,3 +74,19 @@ export const taskReminder = (task, sender) => ({
     `Please complete it today, or tell us in the app if something is stopping you:\n${appUrl()}\n\n` +
     `${APP}`
 });
+
+export const closingSkipped = (user, missing) => ({
+  subject: `${APP}: closing checks skipped`,
+  text:
+    `${user.full_name} was the last person to leave (${when()}) but did not confirm:\n` +
+    missing.map((m) => `  - ${m}`).join("\n") +
+    `\n\nPlease make sure the temple is safe.\n\n${APP}`
+});
+
+export const closingAlert = (problems, closingTime) => ({
+  subject: `${APP}: closing check at ${closingTime}`,
+  text:
+    `Evening check (${when()}):\n\n` +
+    problems.map((p) => `  - ${p}`).join("\n") +
+    `\n\nSee Who's On: ${appUrl()}/admin/attendance\n\n${APP}`
+});

@@ -4,7 +4,8 @@ import pool from "../config/db.js";
 // Only keys listed here can be read or changed through the API.
 export const SETTING_KEYS = {
   registration_open: { type: "boolean", label: "Allow new people to register" },
-  login_alert_to_chairman: { type: "boolean", label: "Email the chairman when someone signs in" }
+  login_alert_to_chairman: { type: "boolean", label: "Email the chairman when someone signs in" },
+  closing_time: { type: "time", label: "Evening closing check" }
 };
 
 const parse = (key, raw) =>

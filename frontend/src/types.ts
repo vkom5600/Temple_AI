@@ -55,8 +55,8 @@ export interface RegisterInput {
 }
 
 export interface Setting {
-  key: 'registration_open' | 'login_alert_to_chairman'
-  value: boolean
+  key: 'registration_open' | 'login_alert_to_chairman' | 'closing_time'
+  value: boolean | string
   label: string
   updated_at: string
 }
@@ -151,4 +151,62 @@ export interface Issue {
   created_task_group: TaskGroup | null
   created_task_assignee_name: string | null
   created_at: string
+}
+
+// ---------- Phase 2: attendance ----------
+
+export type ClosingChecks = { lamps: boolean; gas: boolean; doors: boolean }
+
+export interface AttendanceRecord {
+  id: number
+  attendance_date: string
+  status: 'present' | 'absent'
+  check_in: string | null
+  check_out: string | null
+  closing_checks: ClosingChecks | null
+  closing_confirmed_at: string | null
+  closing_skipped: boolean
+  notes: string | null
+}
+
+export interface MyAttendance {
+  today: AttendanceRecord | null
+  on_site: boolean
+  last_one_here: boolean
+  can_undo: boolean
+  closing_items: Record<keyof ClosingChecks, string>
+  history: Pick<AttendanceRecord, 'attendance_date' | 'status' | 'check_in' | 'check_out'>[]
+}
+
+export type PresenceState = 'here' | 'left' | 'not_in' | 'absent'
+
+export interface PresenceRow {
+  user_id: number
+  full_name: string
+  role: Role
+  designation: Designation | null
+  id: number | null
+  status: AttendanceRecord['status'] | null
+  check_in: string | null
+  check_out: string | null
+  notes: string | null
+  closing_confirmed_at: string | null
+  closing_skipped: boolean | null
+  updated_by_name: string | null
+  state: PresenceState
+}
+
+export interface AttendanceDay {
+  date: string
+  people: PresenceRow[]
+  counts: Record<PresenceState, number>
+  gaps: TaskGroup[]
+  closing: { by: string; at: string; confirmed: boolean; checks: ClosingChecks | null } | null
+}
+
+export interface AttendanceInput {
+  status: 'present' | 'absent'
+  check_in: string | null
+  check_out: string | null
+  notes: string
 }
