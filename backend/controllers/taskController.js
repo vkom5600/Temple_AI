@@ -151,7 +151,8 @@ export const getSummary = async (req, res) => {
             COUNT(*) FILTER (WHERE status = 'todo' AND due_at < NOW())::int                       AS overdue,
             COUNT(*) FILTER (WHERE status = 'awaiting_signoff')::int                              AS awaiting_signoff,
             COUNT(*) FILTER (WHERE status = 'flagged')::int                                       AS flagged,
-            (SELECT COUNT(*)::int FROM issues WHERE status = 'open')                              AS open_issues
+            (SELECT COUNT(*)::int FROM issues WHERE status = 'open')                              AS open_issues,
+            (SELECT COUNT(*)::int FROM users WHERE approval_status = 'pending')                   AS pending_registrations
          FROM (
             SELECT status, due_at,
                    (due_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date AS today

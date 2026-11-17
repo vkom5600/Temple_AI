@@ -1,8 +1,7 @@
 // Temple artwork, drawn in code (no image files) so it takes the colour of whatever
 // it sits on (currentColor) and can be faded with CSS opacity.
 //   <Gopuram />  a temple gateway tower, used faded in the background
-//   <Mandala />  the slowly turning circle in the day banners
-// The garland strip along the top of banners (.toran) is pure CSS, in styles.css.
+//   <Mandala />  faint turning circles inside the indigo day cards
 
 const CX = 100 // centre line of the tower
 
@@ -59,6 +58,3 @@ export function Mandala({ className = '' }: { className?: string }) {
     </svg>
   )
 }
-
-// A thin garland strip (marigolds and mango leaves) for the top edge of banners.
-export const Toran = () => <div className="toran" aria-hidden="true" />

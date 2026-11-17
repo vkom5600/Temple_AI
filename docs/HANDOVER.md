@@ -23,7 +23,7 @@ This document explains **everything built so far, how to run it, how it fits tog
 | 1 – Foundation (login, roles, people, notifications, audit) | ✅ Done, plus **self-registration with chairman approval** from the design docs |
 | 2 – Daily operations: Tasks + Issues | ✅ Done |
 | 2 – Daily operations: Attendance | ✅ Done (this was going to be Mega's half; Venkat built it, **please review it**) |
-| Design pass: screens match the prototype + temple theme | ✅ Done on `feature/ui-design` (see `docs/phases/ui-design.md`) |
+| Design pass: screens rebuilt to the Stitch designs (front-end final review) | ✅ Done on `feature/ui-design`. **Full status by page ID: `docs/PROGRESS-REPORT.md`** |
 | 3 – Bookings + Google Calendar, AI assistant | ⏳ Next. Draft code exists from Mega's first upload (section 9) |
 | 4 – Reports, announcements, audit page, scheduled jobs, wiring modules together | ⏳ After 3 |
 | 5 – Cleanup / audit / test, tagged release 1.0.0 | ⏳ Last |
@@ -37,7 +37,7 @@ phase-1                 Phases 0 + 1
   └─ feature/tasks      + Tasks and Issues
        └─ feature/attendance   + Attendance + this handover
             (phase-2    the same commit as feature/attendance: "Phase 2 finished")
-            └─ feature/ui-design   + dashboard as in the prototype, temple theme   ← the newest, has everything
+            └─ feature/ui-design   + every Phase 1–2 screen rebuilt to the Stitch designs   ← the newest, has everything
 ```
 
 Each branch is built on the one above it. **To see or run everything, use the newest one, `feature/ui-design`.**
@@ -201,9 +201,9 @@ Browser (React + TypeScript)  ──/api──►  Express API (Node.js, JavaScr
 | 15 | Staff + volunteers check in; admins can opt in | Venkat's answer |
 | 16 | Evening closing check at a time set in Settings | Catches people who forget to tap "I'm leaving" |
 | 17 | Phase 3/4 routes switched off until built | They crash without API keys and need tables that don't exist yet |
-| 18 | **Temple theme**: maroon → saffron → gold banners, a faded gopuram behind pages, a marigold garland strip, kolam dots | Feedback (via Venkat): look at the TTD site, the prototype felt a little plain. Ideas only; all artwork is our own |
-| 19 | Temple name in one place (`frontend/src/branding.ts`, or `VITE_TEMPLE_NAME`) | Default "VHP Ilford Temple", as in the prototype. Easy to change |
-| 20 | Dashboard "Today in brief" is worked out from the records until the AI assistant exists | Useful now; Phase 3 can swap in an AI-written summary |
+| 18 | **Stitch design system**: indigo + saffron + green from the VHP logo and website, Inter font, VHP logo everywhere; a faded gopuram behind pages for a temple feel | The agreed designs (front-end final review). The gopuram can be removed in one line if the committee prefers |
+| 19 | Temple name and logo in one place (`frontend/src/branding.ts`, `public/vhp-logo.png`) | "Ilford Hindu Centre · Vishwa Hindu Parishad (UK)", as in the designs |
+| 20 | Suggestions ("✦ …") and "Assign Harish" are rule-based until the AI assistant | Useful now; Phase 3 swaps in Temple AI. Calendar = Google Calendar (Phase 3) |
 
 ---
 

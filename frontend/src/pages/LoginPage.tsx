@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { homePath } from '../constants'
-import { ErrorNote } from '../components/ui'
+import { ErrorNote, Icon } from '../components/ui'
 import EntryShell from '../components/EntryShell'
 
 // Shown only in development (npm run dev) so each role can be tried quickly.
@@ -41,25 +41,29 @@ export default function LoginPage() {
 
   return (
     <EntryShell>
-      <div className="panel entry-card">
-        <h1>Sign in</h1>
-        <p className="muted">Use the email and password for your account.</p>
-        <form className="stack" onSubmit={submit} noValidate>
-          <label className="field">
-            <span className="label">Email</span>
-            <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
-          </label>
-          <label className="field">
-            <span className="label">Password</span>
+      <h1>Sign in</h1>
+      <p className="lead">Use the email and password for your account. It opens the right app for you.</p>
+      <form className="stack" onSubmit={submit} noValidate>
+        <label className="field">
+          <span className="label">Email</span>
+          <span className="ifield">
+            <Icon name="mail" />
+            <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" required autoFocus />
+          </span>
+        </label>
+        <label className="field">
+          <span className="label">Password</span>
+          <span className="ifield">
+            <Icon name="key" />
             <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </label>
-          <ErrorNote>{error}</ErrorNote>
-          <button className="btn btn-primary btn-lg btn-block" disabled={busy || !email.trim() || !password}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      </div>
-      <p className="muted small center entry-foot">New here? <Link to="/register">Register to join the team</Link></p>
+          </span>
+        </label>
+        <ErrorNote>{error}</ErrorNote>
+        <button className="btn btn-primary btn-big" disabled={busy || !email.trim() || !password}>
+          {busy ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
+      <p className="fine">New here? <Link to="/register">Join the temple team</Link></p>
       {import.meta.env.DEV && (
         <section className="demo-accounts">
           <h2 className="eyebrow">Demo accounts (development only)</h2>

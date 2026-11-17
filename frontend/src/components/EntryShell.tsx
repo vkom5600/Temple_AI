@@ -1,23 +1,19 @@
 import type { ReactNode } from 'react'
 import { BRAND } from '../branding'
-import { Gopuram, Mandala, Toran } from './Ornaments'
+import { Gopuram } from './Ornaments'
 
-// Sign-in and registration: a temple gateway banner (two faded gopurams, a garland
-// along the top) with the page's card sitting over its lower edge.
+// Sign in (G1) and Join the temple team (W2 / W3): the indigo top bar with the logo,
+// as in the designs, then a single column. A faded gopuram sits behind.
 export default function EntryShell({ children }: { children: ReactNode }) {
   return (
     <div className="entry">
-      <header className="entry-band">
-        <Toran />
-        <Mandala />
-        <Gopuram className="gopuram-left" />
-        <Gopuram className="gopuram-right" />
-        <div className="entry-brand">
-          <span className="brand-mark">ॐ</span>
-          <div>
-            <div className="brand-name">{BRAND.templeName}</div>
-            <div className="brand-sub">{BRAND.tagline}</div>
-          </div>
+      <Gopuram className="page-watermark" />
+      <div className="accent-line" />
+      <header className="entry-top">
+        <img className="logo" src={BRAND.logo} alt="" />
+        <div>
+          <b>{BRAND.templeName}</b>
+          <span>{BRAND.tagline}</span>
         </div>
       </header>
       <main className="entry-body">{children}</main>

@@ -97,60 +97,72 @@ export default function CheckInCard({ optIn = false }: { optIn?: boolean }) {
   )
 }
 
-// Last person out: confirm lamps, gas and doors. Skipping tells the chairman.
-function LeavingSheet({ me, busy, onClose, onLeave }: {
+// M8 "Leave now?". Lists tasks not done yet; the last person out also confirms
+// lamps, gas and doors (skipping tells the chairman).
+export function LeavingSheet({ me, busy, unfinished = [], onClose, onLeave }: {
   me: MyAttendance
   busy: boolean
+  unfinished?: string[]
   onClose: () => void
   onLeave: (closing?: ClosingChecks) => void
 }) {
   const [checks, setChecks] = useState<ClosingChecks>({ lamps: false, gas: false, doors: false })
   const all = Object.values(checks).every(Boolean)
   const items = Object.entries(me.closing_items) as [keyof ClosingChecks, string][]
+  const last = me.last_one_here
 
-  if (!me.last_one_here) {
-    return (
-      <Modal
-        title="Leaving now?"
-        onClose={onClose}
-        footer={
-          <>
-            <button className="btn btn-ghost" onClick={onClose}>Not yet</button>
-            <button className="btn btn-primary" disabled={busy} onClick={() => onLeave()}>I'm leaving</button>
-          </>
-        }
-      >
-        <p>Others are still here, so they'll lock up.</p>
-      </Modal>
-    )
-  }
+  const warning = unfinished.length > 0 && (
+    <div className="ai-banner" style={{ alignItems: 'flex-start' }}>
+      <Icon name="alert" size={20} />
+      <div>
+        <b>{unfinished.length} task{unfinished.length > 1 ? 's' : ''} not done</b>
+        <div>{unfinished.join(', ')}</div>
+      </div>
+    </div>
+  )
 
   return (
     <Modal
-      title="You're the last one here"
+      title={last ? "You're the last one here" : 'Leave now?'}
       onClose={onClose}
       footer={
-        <>
-          <button className="btn btn-danger-ghost push-left" disabled={busy} onClick={() => onLeave(checks)}>Leave without checking</button>
-          <button className="btn btn-success" disabled={!all || busy} onClick={() => onLeave(checks)}>All done, leave</button>
-        </>
+        <div className="stack" style={{ width: '100%' }}>
+          {last ? (
+            <>
+              <button className="btn btn-success btn-big" disabled={!all || busy} onClick={() => onLeave(checks)}><Icon name="check" /> All done, leave</button>
+              <button className="btn btn-danger-ghost" disabled={busy} onClick={() => onLeave(checks)}>Leave without checking</button>
+            </>
+          ) : (
+            <>
+              <button className="btn btn-primary btn-big" disabled={busy} onClick={() => onLeave()}><Icon name="check" /> Yes, I'm leaving</button>
+              <button className="btn btn-outline btn-big" onClick={onClose}>No, stay</button>
+            </>
+          )}
+        </div>
       }
     >
-      <p>Before you go, please check:</p>
-      <div className="stack-tight">
-        {items.map(([key, label]) => (
-          <label key={key} className={`closing-check ${checks[key] ? 'on' : ''}`}>
-            <input type="checkbox" checked={checks[key]} onChange={(e) => setChecks((c) => ({ ...c, [key]: e.target.checked }))} />
-            <span>{label}</span>
-          </label>
-        ))}
-      </div>
-      {!all && <p className="muted small">If you leave without ticking everything, the chairman will be told.</p>}
+      {warning}
+      {last ? (
+        <>
+          <p style={{ margin: 0 }}>Before you go, please check:</p>
+          <div className="stack-tight">
+            {items.map(([key, label]) => (
+              <label key={key} className={`closing-check ${checks[key] ? 'on' : ''}`}>
+                <input type="checkbox" checked={checks[key]} onChange={(e) => setChecks((c) => ({ ...c, [key]: e.target.checked }))} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {!all && <p className="muted small">If you leave without ticking everything, the chairman will be told.</p>}
+        </>
+      ) : (
+        <p className="muted" style={{ margin: 0 }}>Others are still here, so they'll lock up.</p>
+      )}
     </Modal>
   )
 }
 
-function HistoryDialog({ me, onClose }: { me: MyAttendance; onClose: () => void }) {
+export function HistoryDialog({ me, onClose }: { me: MyAttendance; onClose: () => void }) {
   const hours = (inAt: string | null, outAt: string | null) => {
     if (!inAt || !outAt) return ''
     const mins = Math.round((new Date(outAt).getTime() - new Date(inAt).getTime()) / 60000)

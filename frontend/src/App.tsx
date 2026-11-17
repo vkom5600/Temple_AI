@@ -10,6 +10,9 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import SettingsPage from './pages/admin/SettingsPage'
 import AdminHome from './pages/admin/AdminHome'
+import ActionCenterPage from './pages/admin/ActionCenterPage'
+import CalendarPage from './pages/admin/CalendarPage'
+import ReportsPage from './pages/admin/ReportsPage'
 import PeoplePage from './pages/admin/PeoplePage'
 import TasksPage from './pages/admin/TasksPage'
 import IssuesPage from './pages/admin/IssuesPage'
@@ -28,6 +31,9 @@ export default function App() {
 
             <Route path="/admin" element={<RequireRole roles={['chairman', 'committee']}><AdminLayout /></RequireRole>}>
               <Route index element={<AdminHome />} />
+              <Route path="action-center" element={<ActionCenterPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="reports" element={<ReportsPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="issues" element={<IssuesPage />} />
               <Route path="signoffs" element={<SignoffsPage />} />

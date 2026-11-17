@@ -1,30 +1,27 @@
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { BRAND } from '../branding'
 import { jobLabel } from '../constants'
 import NotificationBell from '../components/NotificationBell'
-import { Avatar, Icon } from '../components/ui'
 import { Gopuram } from '../components/Ornaments'
 
-// Mobile-first layout for staff and volunteers.
+// Staff phone app (M1/M2): an indigo top bar with the logo, then one scrolling page.
+// Sign out sits at the bottom of the page, as in the design.
 export default function StaffLayout() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   if (!user) return null
 
   return (
     <div className="mobile">
       <Gopuram className="page-watermark" />
-      <header className="m-head">
-        <div className="row">
-          <Avatar name={user.full_name} size={40} />
-          <div>
-            <div className="m-hello">Namaste, {user.full_name}</div>
-            <div className="muted small">{jobLabel(user)}</div>
-          </div>
+      <div className="accent-line" />
+      <header className="m-top">
+        <img className="logo" src={BRAND.logo} alt={BRAND.templeName} />
+        <div className="who">
+          <b>Namaste, {user.full_name.split(' ')[0]}</b>
+          <span>{jobLabel(user)}</span>
         </div>
-        <div className="row">
-          <NotificationBell />
-          <button className="icon-btn" onClick={logout} aria-label="Log out"><Icon name="logout" /></button>
-        </div>
+        <NotificationBell />
       </header>
       <Outlet />
     </div>

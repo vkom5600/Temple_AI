@@ -1,9 +1,10 @@
-// The temple's name and wording, in one place.
-// To rename, set VITE_TEMPLE_NAME in frontend/.env (no code change), or edit the defaults here.
-// Colours and artwork live in styles.css ("Temple theme" section) and components/Ornaments.tsx.
+// The temple's name, logo and wording, in one place.
+// Colours come from the logo and the VHP (UK) website: indigo, with saffron and green accents.
+// They live in styles.css (the tokens at the top); the faded gopuram is components/Ornaments.tsx.
 export const BRAND = {
-  templeName: import.meta.env.VITE_TEMPLE_NAME || 'VHP Ilford Temple',
+  templeName: import.meta.env.VITE_TEMPLE_NAME || 'Ilford Hindu Centre',
   // Under the name in the sidebar and on the sign-in page.
-  tagline: 'Daily operations',
+  tagline: 'Vishwa Hindu Parishad (UK)',
+  logo: '/vhp-logo.png',
   appName: 'Temple AI',
 }

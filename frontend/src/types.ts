@@ -129,6 +129,7 @@ export interface TaskSummary {
   awaiting_signoff: number
   flagged: number
   open_issues: number
+  pending_registrations: number
 }
 
 export type TaskView = 'open' | 'overdue' | 'signoff' | 'flagged' | 'done' | 'all' | 'today' | 'mine'

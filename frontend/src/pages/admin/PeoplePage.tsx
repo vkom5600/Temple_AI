@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
-import { usersApi } from '../../api/endpoints'
+import { attendanceApi, tasksApi, usersApi } from '../../api/endpoints'
 import { DESIGNATION_LABELS, ROLE_GROUPS, ROLE_LABELS, jobLabel } from '../../constants'
+import { fmtTime, toDateInput } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Avatar, Badge, ErrorNote, Icon, Modal, Spinner } from '../../components/ui'
-import type { Designation, User, UserInput } from '../../types'
-import Registrations from './Registrations'
+import type { AttendanceDay, Designation, PresenceRow, Role, Task, User, UserInput } from '../../types'
+import { SignupsCard, SignupsDrawer } from './Registrations'
 
 const BLANK: UserInput = {
   full_name: '',
@@ -29,71 +31,133 @@ const toInput = (u: User): UserInput => ({
   password: '',
 })
 
-// Everyone on the team. Chairman can add/edit/deactivate; committee can view.
+// P1 People (design: screens/26_P1_people.png): staff, volunteers and committee,
+// with today's attendance beside each name. Chairman adds, edits and approves sign-ups.
 export default function PeoplePage() {
   const { user: me } = useAuth()
   const canEdit = me?.role === 'chairman'
   const [people, setPeople] = useState<User[] | null>(null)
+  const [day, setDay] = useState<AttendanceDay | null>(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<User | 'new' | null>(null)
+  const [query, setQuery] = useState('')
+  const [role, setRole] = useState<Role | ''>('')
+  const [params, setParams] = useSearchParams()
+  const reviewing = params.get('review') === 'signups'
+  const setReviewing = (on: boolean) => setParams(on ? { review: 'signups' } : {}, { replace: true })
 
   const load = useCallback(() => {
     usersApi.list().then((r) => setPeople(r.users)).catch((e: Error) => setError(e.message))
+    attendanceApi.day().then(setDay).catch(() => {})
   }, [])
 
   useEffect(load, [load])
 
+  const presence = new Map(day?.people.map((p) => [p.user_id, p]) ?? [])
   const approved = people?.filter((p) => p.approval_status === 'approved') ?? []
-  const active = approved.filter((p) => p.is_active)
-  const inactive = approved.filter((p) => !p.is_active)
+  const q = query.trim().toLowerCase()
+  const match = (p: User) =>
+    (!role || p.role === role) &&
+    (!q || `${p.full_name} ${jobLabel(p)} ${p.phone ?? ''} ${p.email}`.toLowerCase().includes(q))
+  const active = approved.filter((p) => p.is_active && match(p))
+  const inactive = approved.filter((p) => !p.is_active && match(p))
+  const expected = day ? day.people.length - day.counts.absent : 0
+
+  // Staff first, as in the design: they're the ones checking in.
+  const groups: { label: string; list: User[] }[] = [
+    { label: 'Staff', list: active.filter((p) => p.role === 'staff') },
+    { label: 'Volunteers', list: active.filter((p) => p.role === 'volunteer') },
+    { label: 'Committee', list: active.filter((p) => p.role === 'chairman' || p.role === 'committee') },
+    { label: 'Switched off', list: inactive },
+  ]
 
   return (
     <div className="page">
       <header className="page-head">
         <div>
           <h1>People</h1>
-          <p className="muted">
-            {canEdit ? 'Add people, set their job, and switch off accounts for anyone who has left.' : 'Everyone on the temple team.'}
-          </p>
+          <p>Staff, volunteers and committee</p>
         </div>
         {canEdit && (
-          <button className="btn btn-primary" onClick={() => setEditing('new')}>
-            <Icon name="plus" size={16} /> Add person
-          </button>
+          <div className="head-actions">
+            <button className="btn btn-primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> Add person</button>
+          </div>
         )}
       </header>
+
+      {day && (
+        <section className="list-card onsite-bar">
+          <b>{day.counts.here} of {expected} on site</b>
+          <div className="bar green"><i style={{ width: `${expected ? (day.counts.here / expected) * 100 : 0}%` }} /></div>
+          {day.counts.not_in > 0 && (
+            <span className="row" style={{ gap: 6 }}>
+              <span className="muted small">Not in yet:</span>
+              {day.people.filter((p) => p.state === 'not_in').map((p) => <span key={p.user_id} className="pill pill-saf">{p.full_name.split(' ')[0]}</span>)}
+            </span>
+          )}
+        </section>
+      )}
 
       <ErrorNote>{error}</ErrorNote>
       {!people && !error && <Spinner />}
 
-      {canEdit && people && (
-        <Registrations
+      {canEdit && people && <SignupsCard pending={people.filter((p) => p.approval_status === 'pending')} onReview={() => setReviewing(true)} />}
+      {canEdit && people && reviewing && (
+        <SignupsDrawer
           pending={people.filter((p) => p.approval_status === 'pending')}
           rejected={people.filter((p) => p.approval_status === 'rejected')}
+          onClose={() => setReviewing(false)}
           onChange={load}
         />
       )}
 
-      {ROLE_GROUPS.map(({ role, label }) => {
-        const group = active.filter((p) => p.role === role)
-        if (!group.length) return null
-        return (
-          <section key={role} className="panel">
-            <div className="panel-head"><h2>{label}</h2><span className="muted small">{group.length}</span></div>
-            <PeopleList people={group} canEdit={canEdit} onPick={setEditing} />
-          </section>
-        )
-      })}
+      <div className="filters">
+        <label className="search" style={{ maxWidth: 520 }}>
+          <Icon name="search" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, role or phone" aria-label="Search people" />
+        </label>
+        <select value={role} onChange={(e) => setRole(e.target.value as Role | '')} aria-label="Role" style={{ marginLeft: 'auto' }}>
+          <option value="">Role: All</option>
+          {ROLE_GROUPS.map((g) => <option key={g.role} value={g.role}>{g.label}</option>)}
+        </select>
+      </div>
 
-      {inactive.length > 0 && (
-        <section className="panel">
-          <div className="panel-head"><h2>Inactive</h2><span className="muted small">{inactive.length}</span></div>
-          <PeopleList people={inactive} canEdit={canEdit} onPick={setEditing} />
+      {people && (
+        <section className="list-card">
+          <table className="ptable">
+            <tbody>
+              {groups.filter((g) => g.list.length).map((g) => (
+                <Fragment key={g.label}>
+                  <tr className="group"><td colSpan={6}>{g.label} ({g.list.length})</td></tr>
+                  {g.list.map((u) => {
+                    const editable = canEdit && u.role !== 'chairman'
+                    return (
+                      <tr
+                        key={u.id}
+                        className={editable ? 'prow' : ''}
+                        onClick={editable ? () => setEditing(u) : undefined}
+                        tabIndex={editable ? 0 : undefined}
+                        onKeyDown={editable ? (e) => e.key === 'Enter' && setEditing(u) : undefined}
+                      >
+                        <td><span className="pname"><Avatar name={u.full_name} size={38} /> {u.full_name}{u.id === me?.id && <span className="muted small">(you)</span>}</span></td>
+                        <td>{u.role === 'committee' ? 'Committee member' : jobLabel(u)}</td>
+                        <td className="mono">{u.phone ?? '—'}</td>
+                        <td className="email">{u.email}</td>
+                        <td><Presence row={presence.get(u.id)} active={u.is_active} /></td>
+                        <td className="chev">{editable && <Icon name="chevron-right" size={18} />}</td>
+                      </tr>
+                    )
+                  })}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         </section>
       )}
 
       {editing && (
         <PersonForm
+          presence={editing === 'new' ? undefined : presence.get(editing.id)}
           person={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
           onSaved={() => {
@@ -106,43 +170,42 @@ export default function PeoplePage() {
   )
 }
 
-function PeopleList({ people, canEdit, onPick }: { people: User[]; canEdit: boolean; onPick: (u: User) => void }) {
-  return (
-    <div className="people-list">
-      {people.map((u) => {
-        const body = (
-          <>
-            <Avatar name={u.full_name} />
-            <div className="grow">
-              <div className="strong">{u.full_name}</div>
-              <div className="muted small">{jobLabel(u)}</div>
-              <div className="muted small">{[u.phone, u.email].filter(Boolean).join(' · ')}</div>
-            </div>
-            {!u.is_active && <Badge>Inactive</Badge>}
-          </>
-        )
-        const editable = canEdit && u.role !== 'chairman'
-        return editable ? (
-          <button key={u.id} className="person-row person-btn" onClick={() => onPick(u)} title="Edit details">{body}</button>
-        ) : (
-          <div key={u.id} className="person-row">{body}</div>
-        )
-      })}
-    </div>
-  )
+// "On site · 08:10", "Left 17:05", "Not in yet", "Absent", or "—" for people who don't check in.
+function Presence({ row, active }: { row?: PresenceRow; active: boolean }) {
+  if (!active) return <Badge>Switched off</Badge>
+  if (!row) return <span className="muted">—</span>
+  if (row.state === 'here') return <span className="status st-here"><span className="dot" /> On site · {fmtTime(row.check_in!)}</span>
+  if (row.state === 'left') return <span className="status st-left"><span className="dot" /> Left {fmtTime(row.check_out!)}</span>
+  if (row.state === 'absent') return <span className="status st-absent"><span className="dot" /> Absent</span>
+  return <span className="status st-off"><span className="dot" /> Not in yet</span>
 }
 
-function PersonForm({ person, onClose, onSaved }: { person: User | null; onClose: () => void; onSaved: () => void }) {
+// P2 Person details and edit / P3 Add person (designs: screens/28_P2).
+function PersonForm({ person, presence, onClose, onSaved }: { person: User | null; presence?: PresenceRow; onClose: () => void; onSaved: () => void }) {
   const toast = useToast()
   const [form, setForm] = useState<UserInput>(person ? toInput(person) : BLANK)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [menu, setMenu] = useState(false)
+  const [tasks, setTasks] = useState<Task[] | null>(null)
+  const [week, setWeek] = useState<{ date: string; state: string }[] | null>(null)
   const set = <K extends keyof UserInput>(key: K, value: UserInput[K]) => setForm((f) => ({ ...f, [key]: value }))
 
   const isNew = !person
+  const checksIn = person && (person.role === 'staff' || person.role === 'volunteer')
   const needsJob = form.role === 'staff' && !form.designation
   const passwordOk = isNew ? (form.password ?? '').length >= 8 : !form.password || form.password.length >= 8
   const canSave = form.full_name.trim() && form.email.trim() && !needsJob && passwordOk && !busy
+
+  useEffect(() => {
+    if (!person) return
+    tasksApi.list({ view: 'today' }).then((r) => setTasks(r.tasks.filter((t) => t.assigned_to === person.id))).catch(() => setTasks([]))
+    if (!checksIn) return
+    // Last 7 days of attendance, one day at a time (small team, so 7 quick requests).
+    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return toDateInput(d) })
+    Promise.all(days.map((d) => attendanceApi.day(d).then((r) => r.people.find((p) => p.user_id === person.id)?.state ?? 'none').catch(() => 'none')))
+      .then((states) => setWeek(days.map((date, i) => ({ date, state: states[i] }))))
+  }, [person, checksIn])
 
   const run = async (action: () => Promise<unknown>, message: string) => {
     setError('')
@@ -170,69 +233,147 @@ function PersonForm({ person, onClose, onSaved }: { person: User | null; onClose
       person.is_active ? `${person.full_name} can no longer sign in` : `${person.full_name} can sign in again`,
     )
 
+  const statusPill = presence?.state === 'here'
+    ? <span className="pill pill-grn"><span className="dot" /> On site since {fmtTime(presence.check_in!)}</span>
+    : presence?.state === 'left'
+      ? <span className="pill pill-soft">Left {fmtTime(presence.check_out!)}</span>
+      : presence?.state === 'absent' ? <span className="pill pill-red">Absent today</span> : null
+  const attended = week?.filter((d) => d.state === 'here' || d.state === 'left').length ?? 0
+
   return (
     <Modal
-      title={person ? `Edit ${person.full_name}` : 'Add person'}
+      title={person ? person.full_name : 'Add person'}
+      size="wide"
       onClose={onClose}
+      head={person ? (
+        <div className="person-head">
+          <span className="big-av">{person.full_name[0]?.toUpperCase()}</span>
+          <div className="grow">
+            <h2>{person.full_name} {statusPill}</h2>
+            <p>{person.role === 'committee' ? 'Committee member' : jobLabel(person)} · {ROLE_LABELS[person.role]}</p>
+          </div>
+          <div className="kebab">
+            <button className="icon-btn" aria-label="More" aria-expanded={menu} onClick={() => setMenu((m) => !m)}><Icon name="list" /></button>
+            {menu && (
+              <div className="kebab-menu">
+                <button className={person.is_active ? 'danger' : ''} onClick={() => { setMenu(false); toggleActive() }}>
+                  <Icon name={person.is_active ? 'x' : 'check'} /> {person.is_active ? 'Switch off sign-in' : 'Switch sign-in back on'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : undefined}
+      subtitle={isNew ? 'They sign in with this email and the starting password you give them.' : undefined}
       footer={
         <>
-          {person && (
-            <button className={`btn ${person.is_active ? 'btn-danger-ghost' : 'btn-ghost'} push-left`} onClick={toggleActive} disabled={busy}>
-              {person.is_active ? 'Deactivate' : 'Reactivate'}
-            </button>
-          )}
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" disabled={!canSave} onClick={save}>{busy ? 'Saving…' : person ? 'Save' : 'Add'}</button>
+          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary btn-lg" disabled={!canSave} onClick={save}><Icon name="check" /> {busy ? 'Saving…' : person ? 'Save changes' : 'Add person'}</button>
         </>
       }
     >
-      <label className="field">
-        <span className="label">Name</span>
-        <input value={form.full_name} onChange={(e) => set('full_name', e.target.value)} autoFocus />
-      </label>
-
-      <div className="form-grid">
-        <label className="field">
-          <span className="label">Access</span>
-          <select value={form.role} onChange={(e) => set('role', e.target.value as UserInput['role'])}>
-            {(['committee', 'staff', 'volunteer'] as const).map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-          </select>
-        </label>
-        {form.role === 'staff' && (
+      <div className="filled stack" style={{ gap: 16 }}>
+        <div className="grid-2f">
           <label className="field">
-            <span className="label">Job</span>
-            <select value={form.designation} onChange={(e) => set('designation', e.target.value as Designation | '')}>
-              <option value="">Choose…</option>
-              {Object.entries(DESIGNATION_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-            </select>
+            <span className="ulabel">Full name</span>
+            <input value={form.full_name} onChange={(e) => set('full_name', e.target.value)} autoFocus={isNew} />
           </label>
-        )}
-      </div>
-      <p className="muted small">Committee can see everything and manage the day. Staff and volunteers see their own work.</p>
+          <label className="field">
+            <span className="ulabel">Job</span>
+            {form.role === 'staff' ? (
+              <select value={form.designation} onChange={(e) => set('designation', e.target.value as Designation | '')}>
+                <option value="">Choose…</option>
+                {Object.entries(DESIGNATION_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              </select>
+            ) : (
+              <input value={form.role === 'committee' ? 'Committee member' : 'Volunteer'} disabled />
+            )}
+          </label>
+        </div>
 
-      <div className="form-grid">
-        <label className="field">
-          <span className="label">Email <span className="muted">(used to sign in)</span></span>
-          <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="name@example.com" />
-        </label>
-        <label className="field">
-          <span className="label">Mobile</span>
-          <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+44 7…" />
-        </label>
-        <label className="field">
-          <span className="label">Emergency contact <span className="muted">(optional)</span></span>
-          <input value={form.emergency_contact} onChange={(e) => set('emergency_contact', e.target.value)} placeholder="Name and number" />
-        </label>
-        <label className="field">
-          <span className="label">Joined <span className="muted">(optional)</span></span>
-          <input type="date" value={form.joining_date} onChange={(e) => set('joining_date', e.target.value)} />
-        </label>
+        <div className="field">
+          <span className="ulabel">Group</span>
+          <div className="segmented">
+            {(['staff', 'volunteer', 'committee'] as const).map((r) => (
+              <button key={r} type="button" className={form.role === r ? 'on' : ''} onClick={() => set('role', r)}>{ROLE_LABELS[r]}</button>
+            ))}
+          </div>
+          <span className="muted small">Staff and volunteers get the phone app. Committee members get the admin app.</span>
+        </div>
+
+        <div className="grid-2f">
+          <label className="field">
+            <span className="ulabel">Phone number</span>
+            <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+44 7…" />
+          </label>
+          <label className="field">
+            <span className="ulabel">Email (to sign in)</span>
+            <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="name@example.com" />
+          </label>
+        </div>
+
+        <div className="cols-3">
+          <label className="field">
+            <span className="ulabel">Emergency contact</span>
+            <input value={form.emergency_contact} onChange={(e) => set('emergency_contact', e.target.value)} placeholder="Name and number" />
+          </label>
+          <label className="field">
+            <span className="ulabel">Joined</span>
+            <input type="date" value={form.joining_date} onChange={(e) => set('joining_date', e.target.value)} />
+          </label>
+          <label className="field">
+            <span className="ulabel">{isNew ? 'Starting password' : 'New password'}</span>
+            <input type="text" autoComplete="new-password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder={isNew ? '8+ characters' : 'Leave blank to keep'} />
+          </label>
+        </div>
       </div>
 
-      <label className="field">
-        <span className="label">{isNew ? 'Starting password' : 'New password'} <span className="muted">{isNew ? '(8+ characters; tell them in person)' : '(leave blank to keep the current one)'}</span></span>
-        <input type="text" autoComplete="new-password" value={form.password} onChange={(e) => set('password', e.target.value)} />
-      </label>
+      {person && (
+        <div className={`status-bar ${person.is_active ? '' : 'off'}`}>
+          <span className="dot" />
+          <b>{person.is_active ? 'Active' : 'Switched off'}</b>
+          <span className="muted">· {person.role === 'staff' || person.role === 'volunteer' ? 'uses the staff phone app' : 'uses the admin app'}</span>
+          <button onClick={toggleActive} disabled={busy}>{person.is_active ? 'Switch off sign-in' : 'Switch back on'}</button>
+        </div>
+      )}
+
+      {checksIn && (
+        <section className="dsec">
+          <span className="ulabel">Last 7 days</span>
+          <div className="week-box">
+            <div className="week-dots">
+              {(week ?? Array.from({ length: 7 }, (_, i) => ({ date: String(i), state: 'none' }))).map((d, i) => (
+                <div key={d.date} className={`${d.state === 'here' || d.state === 'left' ? 'on' : d.state === 'absent' ? 'off' : ''} ${i === 6 ? 'today' : ''}`}>
+                  <i>{d.state === 'here' || d.state === 'left' ? <Icon name="check" size={16} /> : d.state === 'absent' ? <Icon name="x" size={14} /> : ''}</i>
+                  <span>{week ? new Date(`${d.date}T12:00:00`).toLocaleDateString([], { weekday: 'short' }) : ''}</span>
+                </div>
+              ))}
+            </div>
+            <div className="week-sum"><span>{week ? `${attended} of 7 days checked in` : 'Loading…'}</span><span className="muted small">Green = came in · red = marked absent</span></div>
+          </div>
+        </section>
+      )}
+
+      {person && (
+        <section className="dsec">
+          <div className="dsec-head" style={{ fontSize: 12.5, color: 'var(--muted)' }}><span>Today's tasks</span><small>{tasks ? `${tasks.length} assigned today` : ''}</small></div>
+          {tasks && tasks.length > 0 ? (
+            <div className="mini-tasks">
+              {tasks.map((t) => (
+                <div key={t.id} className="mini-task">
+                  <span className={`dot ${t.status === 'done' ? 'grn' : t.status === 'awaiting_signoff' || t.status === 'flagged' ? 'saf' : t.is_overdue ? 'red' : ''}`} />
+                  <span className="grow">
+                    <b>{t.title}</b>
+                    <small>
+                      {t.status === 'awaiting_signoff' ? `Awaiting review · done ${fmtTime(t.completed_at!)}` : t.status === 'done' ? 'Done' : t.status === 'flagged' ? `⚑ Couldn't do · ${t.last_comment ?? ''}` : `Due ${fmtTime(t.due_at)}${t.is_overdue ? ' · overdue' : ''}`}
+                    </small>
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : tasks ? <p className="muted small" style={{ margin: 0 }}>Nothing assigned to {person.full_name.split(' ')[0]} today.</p> : null}
+        </section>
+      )}
 
       <ErrorNote>{error}</ErrorNote>
     </Modal>
