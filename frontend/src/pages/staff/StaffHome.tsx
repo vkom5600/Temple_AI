@@ -6,6 +6,7 @@ import { isFinished } from '../../lib/tasks'
 import { useToast } from '../../components/Toast'
 import { Badge, Empty, ErrorNote, Icon, Spinner } from '../../components/ui'
 import CheckInCard from '../../components/attendance/CheckInCard'
+import { Gopuram, Mandala, Toran } from '../../components/Ornaments'
 import ProblemSheet from '../../components/tasks/ProblemSheet'
 import VerifyList from '../../components/tasks/VerifyList'
 import type { Task } from '../../types'
@@ -36,7 +37,9 @@ export default function StaffHome() {
   return (
     <>
       <section className={`day-hero day-${partOfDay()}`}>
+        <Toran />
         <Mandala />
+        <Gopuram />
         <div className="day-top">
           <span className="day-date">{longDate()}</span>
         </div>
@@ -163,21 +166,5 @@ function TaskCard({ task: t, onChanged, onProblem }: { task: Task; onChanged: ()
         <ErrorNote>{error}</ErrorNote>
       </div>
     </div>
-  )
-}
-
-function Mandala() {
-  const petals = (n: number, r: number, rx: number, ry: number) =>
-    Array.from({ length: n }, (_, i) => (
-      <ellipse key={`${r}-${i}`} cx="0" cy={-r} rx={rx} ry={ry} transform={`rotate(${(360 / n) * i})`} />
-    ))
-  return (
-    <svg className="mandala" viewBox="-100 -100 200 200" aria-hidden="true">
-      <g fill="none" stroke="currentColor" strokeWidth="1.2">
-        <circle r="96" /><circle r="78" /><circle r="14" />
-        {petals(16, 60, 10, 24)}
-        {petals(8, 32, 9, 18)}
-      </g>
-    </svg>
   )
 }

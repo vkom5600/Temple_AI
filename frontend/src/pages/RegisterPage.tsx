@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { authApi } from '../api/endpoints'
 import { DESIGNATION_LABELS, homePath } from '../constants'
 import { ErrorNote, Icon, Spinner } from '../components/ui'
+import EntryShell from '../components/EntryShell'
 import type { Designation, RegisterInput } from '../types'
 
 const BLANK: RegisterInput = { full_name: '', email: '', phone: '', password: '', role: 'volunteer', designation: '' }
@@ -52,29 +53,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="login">
-      <div className="login-inner login-narrow">
-        <div className="brand">
-          <span className="brand-mark">ॐ</span>
-          <div>
-            <div className="brand-name">Temple AI</div>
-            <div className="brand-sub">Daily operations</div>
-          </div>
-        </div>
-
-        <h1 className="login-title">Join the team</h1>
+    <EntryShell>
+      <div className="panel entry-card">
+        <h1>Join the team</h1>
 
         {open === null && <Spinner />}
 
         {open === false && (
-          <div className="panel stack">
+          <div className="stack">
             <p>Registration is closed at the moment. Please contact the temple office.</p>
             <Link to="/login" className="btn btn-ghost btn-block">Back to sign in</Link>
           </div>
         )}
 
         {open && done && (
-          <div className="panel stack" role="status">
+          <div className="stack" role="status">
             <div className="notice"><Icon name="check" /><div>{done}</div></div>
             <Link to="/login" className="btn btn-primary btn-block">Back to sign in</Link>
           </div>
@@ -83,7 +76,7 @@ export default function RegisterPage() {
         {open && !done && (
           <>
             <p className="muted">The chairman reviews every registration. You can sign in once it's approved.</p>
-            <form className="panel stack" onSubmit={submit} noValidate>
+            <form className="stack" onSubmit={submit} noValidate>
               <fieldset className="join-as">
                 <legend className="label">I'd like to join as</legend>
                 {JOIN_AS.map((o) => (
@@ -134,10 +127,10 @@ export default function RegisterPage() {
                 {busy ? 'Sending…' : 'Register'}
               </button>
             </form>
-            <p className="muted small center">Already have an account? <Link to="/login">Sign in</Link></p>
           </>
         )}
       </div>
-    </div>
+      {open && !done && <p className="muted small center entry-foot">Already have an account? <Link to="/login">Sign in</Link></p>}
+    </EntryShell>
   )
 }

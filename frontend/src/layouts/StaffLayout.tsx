@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { jobLabel } from '../constants'
 import NotificationBell from '../components/NotificationBell'
 import { Avatar, Icon } from '../components/ui'
+import { Gopuram } from '../components/Ornaments'
 
 // Mobile-first layout for staff and volunteers.
 export default function StaffLayout() {
@@ -11,6 +12,7 @@ export default function StaffLayout() {
 
   return (
     <div className="mobile">
+      <Gopuram className="page-watermark" />
       <header className="m-head">
         <div className="row">
           <Avatar name={user.full_name} size={40} />

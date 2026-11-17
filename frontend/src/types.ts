@@ -131,7 +131,7 @@ export interface TaskSummary {
   open_issues: number
 }
 
-export type TaskView = 'open' | 'overdue' | 'signoff' | 'flagged' | 'done' | 'all'
+export type TaskView = 'open' | 'overdue' | 'signoff' | 'flagged' | 'done' | 'all' | 'today' | 'mine'
 
 export interface Issue {
   id: number

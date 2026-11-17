@@ -23,6 +23,7 @@ This document explains **everything built so far, how to run it, how it fits tog
 | 1 – Foundation (login, roles, people, notifications, audit) | ✅ Done, plus **self-registration with chairman approval** from the design docs |
 | 2 – Daily operations: Tasks + Issues | ✅ Done |
 | 2 – Daily operations: Attendance | ✅ Done (this was going to be Mega's half; Venkat built it, **please review it**) |
+| Design pass: screens match the prototype + temple theme | ✅ Done on `feature/ui-design` (see `docs/phases/ui-design.md`) |
 | 3 – Bookings + Google Calendar, AI assistant | ⏳ Next. Draft code exists from Mega's first upload (section 9) |
 | 4 – Reports, announcements, audit page, scheduled jobs, wiring modules together | ⏳ After 3 |
 | 5 – Cleanup / audit / test, tagged release 1.0.0 | ⏳ Last |
@@ -34,12 +35,14 @@ main                    Mega's original upload (untouched)
 frontend-prototype      Venkat's original mock-data prototype (untouched)
 phase-1                 Phases 0 + 1
   └─ feature/tasks      + Tasks and Issues
-       └─ feature/attendance   + Attendance + this handover   ← the newest, has everything
+       └─ feature/attendance   + Attendance + this handover
+            (phase-2    the same commit as feature/attendance: "Phase 2 finished")
+            └─ feature/ui-design   + dashboard as in the prototype, temple theme   ← the newest, has everything
 ```
 
-Each branch is built on the one above it. **To see or run everything, use `feature/attendance`.**
+Each branch is built on the one above it. **To see or run everything, use the newest one, `feature/ui-design`.**
 
-**Merge order into `main`** (after review): `phase-1` → `feature/tasks` → `feature/attendance`. Merging in that order gives no conflicts.
+**Merge order into `main`** (after review): `phase-1` → `feature/tasks` → `feature/attendance` → `feature/ui-design`. Merging in that order gives no conflicts.
 
 ---
 
@@ -198,6 +201,9 @@ Browser (React + TypeScript)  ──/api──►  Express API (Node.js, JavaScr
 | 15 | Staff + volunteers check in; admins can opt in | Venkat's answer |
 | 16 | Evening closing check at a time set in Settings | Catches people who forget to tap "I'm leaving" |
 | 17 | Phase 3/4 routes switched off until built | They crash without API keys and need tables that don't exist yet |
+| 18 | **Temple theme**: maroon → saffron → gold banners, a faded gopuram behind pages, a marigold garland strip, kolam dots | Feedback (via Venkat): look at the TTD site, the prototype felt a little plain. Ideas only; all artwork is our own |
+| 19 | Temple name in one place (`frontend/src/branding.ts`, or `VITE_TEMPLE_NAME`) | Default "VHP Ilford Temple", as in the prototype. Easy to change |
+| 20 | Dashboard "Today in brief" is worked out from the records until the AI assistant exists | Useful now; Phase 3 can swap in an AI-written summary |
 
 ---
 
@@ -305,5 +311,6 @@ These files exist from the first upload but are **not switched on** (`server.js`
 - **Sign-off alerts** go to every volunteer + committee + the chairman (could be limited to people checked in).
 - **No "change my password" / "forgot password"** yet; the chairman resets passwords.
 - **No automated tests** yet (Phase 5).
+- **Prototype parts still waiting for their feature:** the Events lane and Calendar (Phase 3 bookings), the request bar, Assistant page and AI summary (Phase 3), "Message to all staff" (Phase 4 announcements), festival names in the banners (observances, not planned yet).
 - Lists show at most 500 tasks; no paging.
 - The login rate limit is in memory (resets when the server restarts).

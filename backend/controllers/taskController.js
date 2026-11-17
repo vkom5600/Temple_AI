@@ -81,7 +81,7 @@ export const announceNewTask = (task, actor) =>
 // ---------------------------------------------------------------- reads
 
 // GET /api/tasks
-// Admins: ?view=open|overdue|signoff|flagged|done|all, &group=, &category=
+// Admins: ?view=open|overdue|signoff|flagged|done|all|today|mine, &group=, &category=
 // Staff / volunteers: their own tasks (today, overdue, next 7 days, done today).
 export const getTasks = async (req, res) => {
     const user = req.user;
@@ -103,8 +103,18 @@ export const getTasks = async (req, res) => {
             done: "t.status = 'done' AND t.completed_at > NOW() - INTERVAL '7 days'",
             all: "t.status <> 'cancelled'"
         };
-        if (!views[view]) return fail(res, 400, `view must be one of: ${Object.keys(views).join(", ")}`);
-        where.push(views[view]);
+        if (view === "today") {
+            // Everything due today in temple time (the dashboard's ring and lanes).
+            add("t.status <> 'cancelled' AND (t.due_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date", TIMEZONE);
+        } else if (view === "mine") {
+            // The admin's own open tasks ("Your follow-ups"): to them, or to their role.
+            add(assignedToMeSql(1), user.id, user.role, user.designation);
+            where.push("t.status IN ('todo', 'awaiting_signoff', 'flagged')");
+        } else if (views[view]) {
+            where.push(views[view]);
+        } else {
+            return fail(res, 400, `view must be one of: ${[...Object.keys(views), "today", "mine"].join(", ")}`);
+        }
 
         if (req.query.group) add("(t.assigned_group = $1 OR assignee_role.role = $1 OR assignee_job.designation = $1)", req.query.group);
         if (req.query.category) add("t.category = $1", req.query.category);

@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { homePath } from '../constants'
 import { ErrorNote } from '../components/ui'
+import EntryShell from '../components/EntryShell'
 
 // Shown only in development (npm run dev) so each role can be tried quickly.
 const DEMO_ACCOUNTS = [
@@ -39,20 +40,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login">
-      <div className="login-inner login-narrow">
-        <div className="brand">
-          <span className="brand-mark">ॐ</span>
-          <div>
-            <div className="brand-name">Temple AI</div>
-            <div className="brand-sub">Daily operations</div>
-          </div>
-        </div>
-
-        <h1 className="login-title">Sign in</h1>
-        <p className="muted">Use the email and password the chairman gave you.</p>
-
-        <form className="panel stack" onSubmit={submit} noValidate>
+    <EntryShell>
+      <div className="panel entry-card">
+        <h1>Sign in</h1>
+        <p className="muted">Use the email and password for your account.</p>
+        <form className="stack" onSubmit={submit} noValidate>
           <label className="field">
             <span className="label">Email</span>
             <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
@@ -66,20 +58,19 @@ export default function LoginPage() {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-        <p className="muted small center">New here? <Link to="/register">Register to join the team</Link></p>
-
-        {import.meta.env.DEV && (
-          <section className="demo-accounts">
-            <h2 className="eyebrow">Demo accounts (development only)</h2>
-            <p className="muted small">Password is DEMO_PASSWORD from backend/.env.</p>
-            <div className="chips">
-              {DEMO_ACCOUNTS.map((a) => (
-                <button key={a.email} type="button" className="chip" onClick={() => setEmail(a.email)}>{a.who}</button>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
-    </div>
+      <p className="muted small center entry-foot">New here? <Link to="/register">Register to join the team</Link></p>
+      {import.meta.env.DEV && (
+        <section className="demo-accounts">
+          <h2 className="eyebrow">Demo accounts (development only)</h2>
+          <p className="muted small">Password is DEMO_PASSWORD from backend/.env.</p>
+          <div className="chips">
+            {DEMO_ACCOUNTS.map((a) => (
+              <button key={a.email} type="button" className="chip" onClick={() => setEmail(a.email)}>{a.who}</button>
+            ))}
+          </div>
+        </section>
+      )}
+    </EntryShell>
   )
 }

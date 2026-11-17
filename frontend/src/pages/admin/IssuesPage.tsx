@@ -6,7 +6,7 @@ import { suggestGroup, suggestedTitle } from '../../lib/tasks'
 import { useAdminContext } from '../../layouts/AdminLayout'
 import { useToast } from '../../components/Toast'
 import { Badge, Empty, ErrorNote, Icon, Modal, Spinner } from '../../components/ui'
-import TaskForm from '../../components/tasks/TaskForm'
+import ConvertIssueForm from '../../components/tasks/ConvertIssueForm'
 import type { Issue } from '../../types'
 
 // Problems staff reported, or tasks they couldn't do. Resolve, or turn into a task.
@@ -78,26 +78,7 @@ export default function IssuesPage() {
         })}
       </div>
 
-      {converting && (
-        <TaskForm
-          title="Create a task from this issue"
-          submitLabel="Create task"
-          initial={{
-            title: suggestedTitle(converting.description),
-            assigned_group: suggestGroup(converting.description),
-            description: `Reported by ${converting.reported_by_name ?? 'staff'}: ${converting.description}`,
-            priority: 'high',
-            category: suggestGroup(converting.description) === 'maintenance' ? 'Maintenance' : 'General',
-          }}
-          onClose={() => setConverting(null)}
-          onSubmit={async ([input]) => {
-            const r = await issuesApi.convert(converting.id, input)
-            toast(r.message)
-            setConverting(null)
-            changed()
-          }}
-        />
-      )}
+      {converting && <ConvertIssueForm issue={converting} onClose={() => setConverting(null)} onDone={(m) => { toast(m); setConverting(null); changed() }} />}
 
       {resolving && <ResolveDialog issue={resolving} onClose={() => setResolving(null)} onDone={(m) => { toast(m); setResolving(null); changed() }} />}
     </div>

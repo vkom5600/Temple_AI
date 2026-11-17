@@ -5,6 +5,8 @@ import { tasksApi } from '../api/endpoints'
 import { ROLE_LABELS } from '../constants'
 import NotificationBell from '../components/NotificationBell'
 import { Avatar, Icon, type IconName } from '../components/ui'
+import { Gopuram, Toran } from '../components/Ornaments'
+import { BRAND } from '../branding'
 import type { TaskSummary } from '../types'
 
 // Shared with admin pages through <Outlet context>: today's numbers + a refresh.
@@ -19,13 +21,13 @@ type Count = keyof TaskSummary
 // Desktop layout for chairman and committee. Add a nav item here when a
 // phase brings a new admin page.
 const NAV: { to: string; label: string; icon: IconName; count?: Count; chairmanOnly?: boolean }[] = [
-  { to: '/admin', label: 'Home', icon: 'home' },
+  { to: '/admin', label: 'Dashboard', icon: 'home' },
   { to: '/admin/tasks', label: 'Tasks', icon: 'list', count: 'overdue' },
   { to: '/admin/issues', label: 'Issues', icon: 'flag', count: 'open_issues' },
   { to: '/admin/signoffs', label: 'Sign-offs', icon: 'shield', count: 'awaiting_signoff' },
   { to: '/admin/attendance', label: "Who's on", icon: 'clock' },
   { to: '/admin/people', label: 'People', icon: 'users' },
-  { to: '/admin/settings', label: 'Settings', icon: 'shield', chairmanOnly: true },
+  { to: '/admin/settings', label: 'Settings', icon: 'settings', chairmanOnly: true },
 ]
 
 const REFRESH_MS = 60_000
@@ -52,11 +54,12 @@ export default function AdminLayout() {
   return (
     <div className="admin">
       <aside className="sidebar">
+        <Toran />
         <div className="brand">
           <span className="brand-mark">ॐ</span>
           <div>
-            <div className="brand-name">Temple AI</div>
-            <div className="brand-sub">Operations</div>
+            <div className="brand-name">{BRAND.templeName}</div>
+            <div className="brand-sub">{BRAND.tagline}</div>
           </div>
         </div>
         <nav aria-label="Main">
@@ -83,6 +86,7 @@ export default function AdminLayout() {
       </aside>
 
       <main className="admin-main">
+        <Gopuram className="page-watermark" />
         <Outlet context={{ summary, refreshSummary } satisfies AdminContext} />
       </main>
     </div>
