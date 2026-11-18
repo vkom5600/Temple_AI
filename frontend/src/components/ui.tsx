@@ -25,6 +25,7 @@ const PATHS = {
   'check-circle': <><circle cx="12" cy="12" r="10" /><polyline points="8 12.5 11 15.5 16 9.5" /></>,
   'chevron-down': <polyline points="6 9 12 15 18 9" />,
   'chevron-right': <polyline points="9 6 15 12 9 18" />,
+  'arrow-left': <><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></>,
   'arrow-right': <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>,
   search: <><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
   lock: <><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,

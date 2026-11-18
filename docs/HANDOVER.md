@@ -24,7 +24,8 @@ This document explains **everything built so far, how to run it, how it fits tog
 | 2 – Daily operations: Tasks + Issues | ✅ Done |
 | 2 – Daily operations: Attendance | ✅ Done (this was going to be Mega's half; Venkat built it, **please review it**) |
 | Design pass: screens rebuilt to the Stitch designs (front-end final review) | ✅ Done on `feature/ui-design`. **Full status by page ID: `docs/PROGRESS-REPORT.md`** |
-| 3 – Bookings + Google Calendar, AI assistant | ⏳ Next. Draft code exists from Mega's first upload (section 9) |
+| 3 – Bookings, Temple Rules, allocation view | ✅ Done on `feature/bookings` (see `docs/phases/phase-3-bookings.md`). Google Calendar sync waits for the temple's Google keys |
+| 3b – Temple AI (Claude): Ask AI, Plan with AI | ⏳ Next (needs an Anthropic API key) |
 | 4 – Reports, announcements, audit page, scheduled jobs, wiring modules together | ⏳ After 3 |
 | 5 – Cleanup / audit / test, tagged release 1.0.0 | ⏳ Last |
 
@@ -38,10 +39,11 @@ phase-1                 Phases 0 + 1
        └─ feature/attendance   + Attendance + this handover
             (phase-2    the same commit as feature/attendance: "Phase 2 finished")
             └─ feature/ui-design   + every Phase 1–2 screen rebuilt to the Stitch designs
-                 (present-today   the same as feature/ui-design: the version to present)   ← use this one
+                 (present-today   the same as feature/ui-design: the version presented on 17 Nov)
+                 └─ feature/bookings   + Phase 3 bookings, Temple Rules, allocation   ← the newest, has everything
 ```
 
-Each branch is built on the one above it. **To see or run everything, use `present-today`.** Presenting? Start with `docs/PRESENTATION.md`.
+Each branch is built on the one above it. **To see or run everything, use the newest one, `feature/bookings`.** Presenting? Start with `docs/PRESENTATION.md`.
 
 **Merge order into `main`** (after review): `phase-1` → `feature/tasks` → `feature/attendance` → `feature/ui-design`. Merging in that order gives no conflicts.
 
@@ -209,6 +211,10 @@ Browser (React + TypeScript)  ──/api──►  Express API (Node.js, JavaScr
 | 22 | Broadcast = a notification of type `broadcast` / `broadcast_urgent`; the newest unread shows on staff phones | Design H3 + M2 "Message from Raghu" |
 | 23 | Megha's draft audit-log controller switched on at `/api/audit-logs` (with names and search added) | Powers R2 Activity log |
 | 24 | Server accepts `DATABASE_URL` + `DB_SSL=true` for hosted databases | Needed for Neon/Supabase deployment (docs/PRESENTATION.md section 5) |
+| 25 | **Two ways to book** (committee, 19 Nov): staff/volunteers request on their phone (needs approval); chairman/committee book from the desk or tablet (confirmed at once) | Committee notes; designs M7 + C4 |
+| 26 | **Allocation view**: every hall and room by hour, in the Calendar | Committee: "one view – allocation" |
+| 27 | Spaces in a `resources` table the chairman manages; 6 to start, **10 in all to be added** | Committee: 10 resources (6+2+1+1) |
+| 28 | Approving a booking adds prep tasks (priest, cleaner, caretaker, security with a second check) | Design AC2 |
 
 ---
 

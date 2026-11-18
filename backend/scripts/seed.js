@@ -196,3 +196,39 @@ export async function seedDemoAttendance(pool) {
 
     console.log("Seeded demo attendance for today and yesterday.");
 }
+
+// Phase 3: a few demo bookings (two confirmed today, two requests waiting).
+export async function seedDemoBookings(pool) {
+    const existing = await pool.query("SELECT 1 FROM bookings LIMIT 1");
+    if (existing.rowCount) {
+        console.log("Bookings already exist, demo bookings skipped.");
+        return;
+    }
+    const tz = process.env.TEMPLE_TIMEZONE || "Europe/London";
+    const space = async (name) => (await pool.query("SELECT id FROM resources WHERE name = $1", [name])).rows[0]?.id;
+    const person = async (email) => (await pool.query("SELECT id FROM users WHERE email = $1", [email])).rows[0]?.id;
+    const rules = (await pool.query("SELECT id FROM temple_rules WHERE ask_requester AND is_active")).rows.map((r) => r.id);
+
+    // [title, space, days from today, start hour, end hour, guests, source, status, requester, all rules agreed]
+    const demo = [
+        ["Yoga class", "Community Hall", 0, 9, 10.5, 20, "desk", "approved", "meena@temple.demo", false],
+        ["Bhajan group", "Room G37", 0, 18, 19.5, 15, "desk", "approved", "meena@temple.demo", false],
+        ["Birthday puja", "Shivaji Hall", 3, 14, 18, 80, "mobile", "pending", "ramesh@temple.demo", true],
+        ["Diwali sweets stall", "Community Hall", 5, 17, 23, 40, "mobile", "pending", "priya@temple.demo", true]
+    ];
+    for (const [title, name, days, from, to, guests, source, status, email, agreed] of demo) {
+        await pool.query(
+            `INSERT INTO bookings (resource_id, title, starts_at, ends_at, guests, food, contact_name, contact_phone,
+                                   status, source, requested_by, rules_agreed, rules_agreed_at, reviewed_by, reviewed_at)
+             SELECT $1, $2,
+                    ((date_trunc('day', NOW() AT TIME ZONE $13) + make_interval(days => $3) + make_interval(mins => $4)) AT TIME ZONE $13),
+                    ((date_trunc('day', NOW() AT TIME ZONE $13) + make_interval(days => $3) + make_interval(mins => $5)) AT TIME ZONE $13),
+                    $6, $7, u.full_name, u.phone, $8::varchar, $9, u.id, $10, $11::timestamptz,
+                    CASE WHEN $8::varchar = 'approved' THEN u.id END, CASE WHEN $8::varchar = 'approved' THEN NOW() END
+             FROM users u WHERE u.id = $12`,
+            [await space(name), title, days, Math.round(from * 60), Math.round(to * 60), guests, title.includes("puja"),
+             status, source, JSON.stringify(agreed ? rules : []), agreed ? new Date() : null, await person(email), tz]
+        );
+    }
+    console.log(`Seeded ${demo.length} demo bookings.`);
+}

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { attendanceApi, notificationsApi, tasksApi } from '../../api/endpoints'
+import { attendanceApi, bookingsApi, notificationsApi, tasksApi } from '../../api/endpoints'
+import { Link } from 'react-router-dom'
+import { bookingTimes } from '../../lib/bookings'
 import { useAuth } from '../../auth/AuthContext'
 import { fmtDay, fmtInline, fmtTime, greeting, isToday, longDate, timeAgo } from '../../lib/format'
 import { byDue, isFinished } from '../../lib/tasks'
@@ -9,7 +11,7 @@ import { Mandala } from '../../components/Ornaments'
 import { HistoryDialog, LeavingSheet } from '../../components/attendance/CheckInCard'
 import ProblemSheet from '../../components/tasks/ProblemSheet'
 import VerifyList from '../../components/tasks/VerifyList'
-import type { AppNotification, ClosingChecks, MyAttendance, Task } from '../../types'
+import type { AppNotification, ClosingChecks, MyAttendance, ScheduleItem, Task } from '../../types'
 
 // Staff phone app: M1 Arriving and M2 Your tasks today (designs: screens/33_M1, 34_M2).
 // One scrolling page. Tasks unlock once you tap "I'm here"; "I'm leaving" checks you out.
@@ -31,6 +33,9 @@ export default function StaffHome() {
   }, [])
   // H3 Broadcast: the newest unread message from the chairman/committee, at the top (M2 "Message from Raghu")
   const [message, setMessage] = useState<AppNotification | null>(null)
+  // Confirmed bookings and temple events today ("Today at the temple", M2)
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([])
+  useEffect(() => { bookingsApi.schedule().then((r) => setSchedule(r.bookings)).catch(() => {}) }, [])
   useEffect(() => {
     notificationsApi.list()
       .then((r) => setMessage(r.notifications.find((n) => !n.is_read && n.notification_type.startsWith('broadcast')) ?? null))
@@ -142,6 +147,20 @@ export default function StaffHome() {
         <TaskCard key={t.id} task={t} locked={!onSite} busy={busy} run={run} onProblem={() => setProblem(t)} />
       ))}
 
+      {schedule.length > 0 && (
+        <>
+          <div className="m-sec"><h2>Today at the temple</h2></div>
+          <div className="m-list">
+            {schedule.map((b) => (
+              <div key={b.id} className="li">
+                <span className="when">{bookingTimes(b).split(' – ')[0]}</span>
+                <span className="what">{b.title}<small>{b.resource_name} · until {bookingTimes(b).split(' – ')[1]}</small></span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {later.length > 0 && (
         <>
           <div className="m-sec"><h2>Coming up</h2></div>
@@ -158,7 +177,9 @@ export default function StaffHome() {
 
       <div className="m-actions">
         <button className="btn btn-outline" onClick={() => setProblem('general')}><Icon name="alert" /> Report a problem</button>
+        <Link className="btn btn-outline" to="/staff/bookings"><Icon name="calendar" /> My bookings</Link>
       </div>
+      <Link className="link-arrow" style={{ alignSelf: 'center' }} to="/staff/book">Book a hall or room <Icon name="arrow-right" size={16} /></Link>
       {onSite && me && (
         <button className="btn btn-outline btn-big" disabled={busy} onClick={() => { loadMe(); setLeaving(true) }}><Icon name="leave" /> I'm leaving</button>
       )}

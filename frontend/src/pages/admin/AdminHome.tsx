@@ -12,6 +12,10 @@ import CheckInCard from '../../components/attendance/CheckInCard'
 import InboxRow from '../../components/InboxRow'
 import ConvertIssueForm from '../../components/tasks/ConvertIssueForm'
 import TaskDetails from '../../components/tasks/TaskDetails'
+import BookingReview from '../../components/bookings/BookingReview'
+import { bookingsApi } from '../../api/endpoints'
+import { bookingDay, bookingTimes } from '../../lib/bookings'
+import type { Booking, ScheduleItem } from '../../types'
 import type { Issue, Task } from '../../types'
 
 // H1 Home (design: screens/01_H1_home.png): what needs attention and today at the mandir.
@@ -29,9 +33,16 @@ export default function AdminHome() {
   const [converting, setConverting] = useState<Issue | null>(null)
 
   const [upcoming, setUpcoming] = useState<Task[]>([])
+  const [viewingBooking, setViewingBooking] = useState<number | null>(null)
+  const [bookings, setBookings] = useState<Booking[] | null>(null)
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([])
   const loadToday = useCallback(() => {
     tasksApi.list({ view: 'today' }).then((r) => setToday(r.tasks)).catch(() => setToday([]))
     tasksApi.list({ view: 'open' }).then((r) => setUpcoming(r.tasks)).catch(() => {})
+    const from = new Date(); from.setHours(0, 0, 0, 0)
+    const to = new Date(from); to.setDate(to.getDate() + 60)
+    bookingsApi.list({ from: from.toISOString(), to: to.toISOString() }).then((r) => setBookings(r.bookings)).catch(() => setBookings([]))
+    bookingsApi.schedule().then((r) => setSchedule(r.bookings)).catch(() => {})
   }, [])
   useEffect(loadToday, [loadToday])
 
@@ -100,17 +111,7 @@ export default function AdminHome() {
           <div className="kpi-foot"><Link to="/admin/people" className="link-arrow">See everyone <Icon name="arrow-right" size={16} /></Link></div>
         </section>
 
-        <section className="kpi">
-          <div className="kpi-label">Action Center <Icon name="bell" size={20} /></div>
-          <div className="kpi-value">{waiting} waiting</div>
-          <div className="kpi-note">
-            {summary ? `${summary.open_issues} problem${summary.open_issues === 1 ? '' : 's'} · ${summary.overdue} overdue · ${summary.awaiting_signoff} to sign off` : ' '}
-          </div>
-          {isChairman && (summary?.pending_registrations ?? 0) > 0 && (
-            <div className="ai-banner" style={{ margin: 0 }}><Icon name="users" size={18} /> {summary!.pending_registrations} sign-up{summary!.pending_registrations > 1 ? 's' : ''} waiting for approval</div>
-          )}
-          <div className="kpi-foot"><Link to="/admin/action-center" className="btn btn-primary">Review <Icon name="arrow-right" size={16} /></Link></div>
-        </section>
+        <BookingsCard bookings={bookings} waiting={waiting} onOpen={setViewingBooking} />
       </div>
 
       <div className="home-grid">
@@ -121,7 +122,7 @@ export default function AdminHome() {
           {inbox && !items.length && <p className="muted">All clear. Nothing is waiting for you.</p>}
           <div>
             {items.slice(0, SHOW_MAX).map((item) => (
-              <InboxRow key={item.key} item={item} myId={user.id} onOpenTask={setViewing} onConvert={setConverting} act={act} />
+              <InboxRow key={item.key} item={item} myId={user.id} onOpenTask={setViewing} onOpenBooking={setViewingBooking} onConvert={setConverting} act={act} />
             ))}
           </div>
           {items.length > 0 && (
@@ -136,14 +137,43 @@ export default function AdminHome() {
         </section>
 
         <div className="side-col">
-          <TodaySchedule tasks={today} onOpen={setViewing} />
+          <TodaySchedule tasks={today} bookings={schedule} onOpen={setViewing} onOpenBooking={setViewingBooking} />
           <CheckInCard optIn />
         </div>
       </div>
 
       {viewing && <TaskDetails taskId={viewing} onClose={() => setViewing(null)} onChanged={changed} />}
+      {viewingBooking && <BookingReview bookingId={viewingBooking} onClose={() => setViewingBooking(null)} onChanged={changed} />}
       {converting && <ConvertIssueForm issue={converting} onClose={() => setConverting(null)} onDone={(m) => { toast(m); setConverting(null); changed() }} />}
     </div>
+  )
+}
+
+// H1 "Bookings" card: today's bookings, the next one, and requests waiting.
+function BookingsCard({ bookings, waiting, onOpen }: { bookings: Booking[] | null; waiting: number; onOpen: (id: number) => void }) {
+  const confirmed = (bookings ?? []).filter((b) => b.status === 'approved')
+  const today = confirmed.filter((b) => new Date(b.starts_at).toDateString() === new Date().toDateString())
+  const next = confirmed.find((b) => new Date(b.starts_at) > new Date())
+  const pending = (bookings ?? []).filter((b) => b.status === 'pending')
+  return (
+    <section className="kpi">
+      <div className="kpi-label">Bookings <Icon name="calendar" size={20} /></div>
+      {bookings ? (
+        <>
+          <div className="kpi-value">{today.length} today</div>
+          <div className="kpi-note">{next ? <>Next: <b>{bookingDay(next.starts_at)} · {next.title} {bookingTimes(next).split(' – ')[0]}</b></> : 'Nothing booked coming up'}</div>
+          {pending.length > 0 && (
+            <button className="kpi-box" onClick={() => onOpen(pending[0].id)}>
+              <Icon name="calendar" size={18} /> {pending.length} request{pending.length > 1 ? 's' : ''} waiting for approval
+            </button>
+          )}
+        </>
+      ) : <Spinner />}
+      <div className="kpi-foot">
+        {waiting > 0 && <span className="muted small push-left">{waiting} in the Action Center</span>}
+        <Link to="/admin/action-center" className="btn btn-primary">Review <Icon name="arrow-right" size={16} /></Link>
+      </div>
+    </section>
   )
 }
 
@@ -174,7 +204,7 @@ function TasksCard({ today, overdue }: { today: Task[] | null; overdue: number }
 
 // "Today at the mandir": today's timings as a timeline, with a line for now.
 // Bookings and puja times join this list when the calendar is built (Phase 3).
-function TodaySchedule({ tasks, onOpen }: { tasks: Task[] | null; onOpen: (id: number) => void }) {
+function TodaySchedule({ tasks, bookings, onOpen, onOpenBooking }: { tasks: Task[] | null; bookings: ScheduleItem[]; onOpen: (id: number) => void; onOpenBooking: (id: number) => void }) {
   const list = [...(tasks ?? [])].filter((t) => t.status !== 'cancelled').sort(byDue)
   const now = Date.now()
   const nowIndex = list.findIndex((t) => dueMs(t) > now)
@@ -206,7 +236,25 @@ function TodaySchedule({ tasks, onOpen }: { tasks: Task[] | null; onOpen: (id: n
   return (
     <section className="panel">
       <div className="panel-head" style={{ marginBottom: 4 }}><h2>Today at the mandir</h2></div>
-      <p className="muted" style={{ margin: '0 0 14px' }}>Timings and tasks for today</p>
+      <p className="muted" style={{ margin: '0 0 14px' }}>Timings, activities and bookings</p>
+      {bookings.length > 0 && (
+        <div className="sched-bookings">
+          <span className="ulabel">Bookings today</span>
+          {bookings.map((bk) => {
+            const live = new Date(bk.starts_at).getTime() <= now && new Date(bk.ends_at).getTime() > now
+            return (
+              <button key={bk.id} className={`sched-booking ${live ? 'live' : ''}`} onClick={() => onOpenBooking(bk.id)}>
+                {live && <i className="live-dot" />}
+                <b>{bookingTimes(bk)}</b>
+                <span className="grow">{bk.title}{live && <small>happening now</small>}</span>
+                <span className={`tag ${bk.kind === 'event' ? 'tag-grn' : 'tag-ind'}`}>{bk.kind === 'event' ? 'Event' : 'Booking'}</span>
+                <span className="sched-where">{bk.resource_name}</span>
+              </button>
+            )
+          })}
+          <span className="ulabel" style={{ marginTop: 10 }}>Schedule</span>
+        </div>
+      )}
       {!tasks && <Spinner />}
       {tasks && !list.length && <p className="muted">Nothing scheduled today.</p>}
       {list.length > 0 && (

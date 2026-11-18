@@ -22,7 +22,8 @@ A web app for running the temple day to day:
 | 1 | Sign in, roles, people, sign-up with chairman approval, notifications, audit log | ✅ Done |
 | 2 | Tasks (repeat, safety sign-off, no-deadline), problems, attendance (check in/out, last-person lock-up) | ✅ Done |
 | Design | Every Phase 1–2 screen built to the agreed Stitch designs. Also working: Broadcast, Calendar (month/day), Reports and Activity log, Ask AI (live-data preview), Rao garu's phone | ✅ Done |
-| 3 | Hall bookings + Temple Rules, Google Calendar two-way sync, Temple AI (Claude) | ⏳ Next |
+| 3 | Hall bookings (phone request + desk/tablet), Temple Rules, approval with prep tasks, allocation view | ✅ Done ([notes](docs/phases/phase-3-bookings.md)) |
+| 3b | Temple AI (Claude), Google Calendar two-way sync | ⏳ Next |
 | 4 | AI nightly report, festival Home, per-area committee access, sign-up link/QR | ⏳ |
 | 5 | Testing with the committee, deployment, release 1.0 | ⏳ |
 

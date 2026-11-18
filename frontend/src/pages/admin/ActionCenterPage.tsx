@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { timeAgo } from '../../lib/format'
@@ -9,6 +9,8 @@ import { ErrorNote, Icon, Spinner } from '../../components/ui'
 import InboxRow from '../../components/InboxRow'
 import ConvertIssueForm from '../../components/tasks/ConvertIssueForm'
 import TaskDetails from '../../components/tasks/TaskDetails'
+import BookingReview from '../../components/bookings/BookingReview'
+import { rulesApi } from '../../api/endpoints'
 import type { Issue } from '../../types'
 
 // AC1 Action Center (design: screens/10_AC1_action-center.png): everything waiting,
@@ -29,6 +31,9 @@ export default function ActionCenterPage() {
   const [viewing, setViewing] = useState<number | null>(null)
   const [converting, setConverting] = useState<Issue | null>(null)
   const [showDone, setShowDone] = useState(false)
+  const [viewingBooking, setViewingBooking] = useState<number | null>(null)
+  const [ruleCount, setRuleCount] = useState<number | null>(null)
+  useEffect(() => { rulesApi.list().then((r) => setRuleCount(r.rules.length)).catch(() => {}) }, [])
 
   const changed = () => { reload(); refreshSummary() }
   const act = async (action: () => Promise<{ message: string }>) => {
@@ -52,7 +57,10 @@ export default function ActionCenterPage() {
           <h1>Action Center</h1>
           <p>Everything waiting for you</p>
         </div>
-        <Link to="/admin/issues" className="btn btn-outline"><Icon name="flag" size={16} /> Issue history</Link>
+        <div className="head-actions">
+          <Link to="/admin/issues" className="btn btn-ghost"><Icon name="flag" size={16} /> Issue history</Link>
+          <Link to="/admin/rules" className="btn btn-outline"><span className="star">✦</span> Rules Temple AI checks{ruleCount !== null && ` (${ruleCount})`} <Icon name="arrow-right" size={15} /></Link>
+        </div>
       </header>
 
       <div className="fchips" role="tablist" aria-label="Show">
@@ -77,7 +85,7 @@ export default function ActionCenterPage() {
       {shown.length > 0 && (
         <section className="list-card inbox">
           {shown.map((item) => (
-            <InboxRow key={item.key} item={item} myId={user.id} showWhen onOpenTask={setViewing} onConvert={setConverting} act={act} />
+            <InboxRow key={item.key} item={item} myId={user.id} showWhen onOpenTask={setViewing} onOpenBooking={setViewingBooking} onConvert={setConverting} act={act} />
           ))}
         </section>
       )}
@@ -108,6 +116,7 @@ export default function ActionCenterPage() {
       )}
 
       {viewing && <TaskDetails taskId={viewing} onClose={() => setViewing(null)} onChanged={changed} />}
+      {viewingBooking && <BookingReview bookingId={viewingBooking} onClose={() => setViewingBooking(null)} onChanged={changed} />}
       {converting && <ConvertIssueForm issue={converting} onClose={() => setConverting(null)} onDone={(m) => { toast(m); setConverting(null); changed() }} />}
     </div>
   )

@@ -13,6 +13,8 @@ import { Gopuram } from '../../components/Ornaments'
 import { useToast } from '../../components/Toast'
 import { Icon, Spinner } from '../../components/ui'
 import TaskDetails from '../../components/tasks/TaskDetails'
+import BookingReview from '../../components/bookings/BookingReview'
+import { bookingSlot } from '../../lib/bookings'
 import type { Task, TaskSummary } from '../../types'
 
 // AC1 Needs you (phone) – Rao garu's phone (designs: screens/42_AC1, final review p.12–13).
@@ -30,6 +32,7 @@ export default function PhoneNeedsYou({ context }: Props) {
   const [today, setToday] = useState<Task[] | null>(null)
   const [viewing, setViewing] = useState<number | null>(null)
   const [showDone, setShowDone] = useState(false)
+  const [viewingBooking, setViewingBooking] = useState<number | null>(null)
 
   const loadToday = useCallback(() => { tasksApi.list({ view: 'today' }).then((r) => setToday(r.tasks)).catch(() => {}) }, [])
   useEffect(loadToday, [loadToday])
@@ -69,7 +72,7 @@ export default function PhoneNeedsYou({ context }: Props) {
         <div className="m-sec"><h2>Needs you</h2><span>Most urgent first</span></div>
         {!inbox && <Spinner />}
         {inbox && !items.length && <p className="muted center">Nothing is waiting for you. 🙏</p>}
-        {items.map((item) => <PhoneCard key={item.key} item={item} myId={user.id} onOpen={setViewing} act={act} />)}
+        {items.map((item) => <PhoneCard key={item.key} item={item} myId={user.id} onOpen={setViewing} onOpenBooking={setViewingBooking} act={act} />)}
 
         {inbox && inbox.handledToday.length > 0 && (
           <>
@@ -90,12 +93,13 @@ export default function PhoneNeedsYou({ context }: Props) {
         <button className="signout" onClick={logout}>Sign out</button>
       </div>
       {viewing && <TaskDetails taskId={viewing} onClose={() => setViewing(null)} onChanged={changed} />}
+      {viewingBooking && <BookingReview bookingId={viewingBooking} onClose={() => setViewingBooking(null)} onChanged={changed} />}
     </div>
   )
 }
 
 // One card, one main button (design: "one button per card").
-function PhoneCard({ item, myId, onOpen, act }: { item: InboxItem; myId: number; onOpen: (id: number) => void; act: (a: () => Promise<{ message: string }>) => void }) {
+function PhoneCard({ item, myId, onOpen, onOpenBooking, act }: { item: InboxItem; myId: number; onOpen: (id: number) => void; onOpenBooking: (id: number) => void; act: (a: () => Promise<{ message: string }>) => void }) {
   const { task, issue } = item
   if (item.kind === 'overdue' && task) {
     return (
@@ -136,6 +140,20 @@ function PhoneCard({ item, myId, onOpen, act }: { item: InboxItem; myId: number;
         {task.completed_by === myId
           ? <button className="btn btn-outline" onClick={() => onOpen(task.id)}>Open</button>
           : <button className="btn btn-primary" onClick={() => act(() => tasksApi.verify(task.id))}>Sign off</button>}
+      </div>
+    )
+  }
+  if (item.kind === 'booking' && item.booking) {
+    const b = item.booking.booking
+    const ok = item.booking.check?.recommendation === 'approve'
+    return (
+      <div className={`m-task ${ok ? 's-grn' : 's-red'}`}>
+        <div className="txt">
+          <div className="t">Hall booking · {bookingSlot(b).split(' · ')[0]}</div>
+          <div className="m">{b.title} · {b.resource_name}{b.guests != null && ` · ${b.guests} guests`}</div>
+          {item.booking.check && <div className={`m ${ok ? '' : 'red'}`} style={ok ? { color: 'var(--green)' } : undefined}><span className="star">✦</span> {ok ? `Fits all ${item.booking.check.rules_total} rules · no clashes` : item.booking.check.summary}</div>}
+        </div>
+        <button className="btn btn-primary" onClick={() => onOpenBooking(b.id)}>Review</button>
       </div>
     )
   }

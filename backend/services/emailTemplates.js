@@ -90,3 +90,30 @@ export const closingAlert = (problems, closingTime) => ({
     problems.map((p) => `  - ${p}`).join("\n") +
     `\n\nSee Who's On: ${appUrl()}/admin/attendance\n\n${APP}`
 });
+
+// ---------- Phase 3: bookings ----------
+
+const slot = (b) => `${b.resource_name}, ${when(new Date(b.starts_at))} – ${new Date(b.ends_at).toLocaleTimeString("en-GB", { timeStyle: "short", timeZone: "Europe/London" })}`;
+
+export const bookingRequested = (b) => ({
+  subject: `${APP}: booking request – ${b.title}`,
+  text:
+    `${b.requested_by_name ?? "Someone"} has asked to book ${slot(b)} for "${b.title}"` +
+    `${b.guests ? ` (${b.guests} guests)` : ""}.\n\n` +
+    `Review it in the Action Center: ${appUrl()}/admin/action-center\n\n` +
+    `${APP}`
+});
+
+export const bookingApproved = (b) => ({
+  subject: `${APP}: your booking is confirmed – ${b.title}`,
+  text:
+    `Namaste,\n\nYour booking "${b.title}" is confirmed: ${slot(b)}.\n` +
+    `Please follow the Temple Rules you agreed to. Thank you.\n\n${APP}`
+});
+
+export const bookingDeclined = (b, reason) => ({
+  subject: `${APP}: your booking request – ${b.title}`,
+  text:
+    `Namaste,\n\nSorry, your request "${b.title}" (${slot(b)}) was not approved.\n` +
+    `Reason: ${reason}\n\nPlease speak to the temple office if you have questions.\n\n${APP}`
+});

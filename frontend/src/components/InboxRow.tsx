@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { issuesApi, tasksApi } from '../api/endpoints'
+import { bookingsApi, issuesApi, tasksApi } from '../api/endpoints'
 import { ROLE_LABELS } from '../constants'
 import { fmtTime, timeAgo } from '../lib/format'
+import { bookingSlot } from '../lib/bookings'
 import { jobName, quickTaskFor, type InboxItem } from '../lib/inbox'
 import { assigneeLabel } from '../lib/tasks'
 import { Icon } from './ui'
@@ -21,11 +22,12 @@ export function lateBy(iso: string): string {
 
 // One row of "Needs your attention" (H1) or the Action Center (AC1).
 // Buttons either work straight away (Remind, Assign, Sign off, Mark fixed) or open a page.
-export default function InboxRow({ item, myId, showWhen, onOpenTask, onConvert, act }: {
+export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooking, onConvert, act }: {
   item: InboxItem
   myId: number
   showWhen?: boolean
   onOpenTask: (id: number) => void
+  onOpenBooking: (id: number) => void
   onConvert: (issue: Issue) => void
   act: (action: Action) => void
 }) {
@@ -106,6 +108,29 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onConvert, 
         <div className="attn-actions">
           <button className="btn btn-outline" onClick={() => onOpenTask(task.id)}>Review</button>
           {!own && <button className="btn btn-primary" onClick={() => act(() => tasksApi.verify(task.id))}>Sign off</button>}
+        </div>
+      </div>
+    )
+  }
+
+  if (item.kind === 'booking' && item.booking) {
+    const b = item.booking.booking
+    const check = item.booking.check
+    const ok = check?.recommendation === 'approve'
+    return (
+      <div className="attn-row">
+        <span className="tile-ic ic-ind"><Icon name="calendar" size={20} /></span>
+        <div className="grow">
+          <div className="attn-name"><button onClick={() => onOpenBooking(b.id)}>{b.title}, {b.resource_name}</button></div>
+          <div className="attn-meta">
+            <span>{b.contact_name ?? b.requested_by_name} · {bookingSlot(b)}{b.guests != null && ` · ${b.guests} guests`}</span>
+          </div>
+          {check && <span className={`hint ${ok ? 'hint-grn' : 'hint-red'}`}><span className="star">✦</span> {ok ? `Fits all ${check.rules_total} rules · no clashes` : check.summary}</span>}
+        </div>
+        {showWhen && <span className="inbox-when">Asked {timeAgo(b.created_at)}</span>}
+        <div className="attn-actions">
+          <button className="btn btn-outline" onClick={() => onOpenBooking(b.id)}>{ok ? 'Decline' : 'Review'}</button>
+          <button className="btn btn-act" onClick={() => act(() => bookingsApi.approve(b.id))}>Approve</button>
         </div>
       </div>
     )

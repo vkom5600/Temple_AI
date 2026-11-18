@@ -26,7 +26,8 @@
 | 1 | Sign in, roles, people, self-registration with chairman approval, notifications, audit log | ✅ Done |
 | 2 | Tasks (assign, repeat, sign-off), problems/issues, attendance (check in/out, last-person lock-up) | ✅ Done |
 | Design | Screens rebuilt to the Stitch designs | ✅ Done for every Phase 1–2 page |
-| 3 | Bookings + Google Calendar, Temple Rules, AI assistant | ⏳ Next |
+| 3 | Bookings (phone request + desk/tablet), Temple Rules, approval with prep tasks, allocation view | ✅ Done 19 Nov (`feature/bookings`) |
+| 3b | Temple AI (Claude), Google Calendar sync | ⏳ Next |
 | 4 | Reports, broadcasts, activity log, festival reminders, wiring it together | ⏳ After 3 |
 | 5 | Testing, clean-up, deployment, release | ⏳ Last |
 
@@ -40,14 +41,16 @@
 |---|---|---|---|
 | **H1** | Home | ✅ | "Namaste, Raghu", date, status pill, **Plan with AI** and **Broadcast** (as designed). Three cards: **Today's tasks** (done, awaiting review, overdue), **Attendance** (on site, who isn't in yet), **Action Center** (how much is waiting). **Needs your attention** (top 4 with one-click buttons and a tip on what to do first). **Today at the mandir** (today's timeline, a line for "now", the next item highlighted with a countdown). |
 | **AC1** | Action Center | ✅ | Everything waiting, filters **All / Approvals / Problems / Overdue**. Rows: overdue tasks (**Remind**, **Reassign**), reported problems (**Assign Harish** gives it straight to the right person, **Mark fixed**), safety sign-offs (**Review**, **Sign off**), sign-ups (**Review** opens P5). **Done today** list at the bottom. |
-| AC2–AC4 | Booking review, All clear, Temple Rules | ◻ Phase 3 | Need bookings. AC3 "All clear" already shows when nothing is waiting. |
+| **AC2** | Booking review | ✅ (Phase 3) | Requester, date and time, food, guests, Temple Rules agreed (6 of 6), recommendation, the prep tasks approval adds; Ask a question / Reject / Approve. |
+| AC3 | All clear | ✅ | Shows when nothing is waiting. |
+| **AC4** | Temple Rules | ✅ (Phase 3) | Grouped, numbered rules; add, edit, switch off; "asked when booking" rules make the phone checklist. |
 | **T1** | Tasks: Today | ✅ | Tabs **Today / Upcoming / All**, search, Person and Role filters, "x of y done today" bar. Sections **Needs attention** (overdue, couldn't do), **Awaiting review**, **To do**. "Show N completed tasks". |
 | **T2** | Tasks: Upcoming and All | ✅ | Upcoming list; All as a table. |
 | **T3** | New task | ✅ | Two columns, as designed, including **No deadline**: *The essentials* (what, details, **A person / A role**, who it will be sent to, a workload suggestion) and *Options* (deadline date and time, Repeat None/Daily/Weekly, Priority Normal/High, Safety task, where, category). Templates for common jobs. Button says who gets notified ("Create & notify Ramesh"). |
 | **T4** | Task details and edit | ✅ | Opens as a side panel. Brief (the instructions shown in a yellow quote box), assigned to/by, deadline, repeat, place, priority, safety. History timeline and comments. **Delete task**, **Send reminder**, **Edit task**. |
 | **T5** | Review a finished task | ✅ | Same panel: the **submission** (on time or late, with the person's note), **What needs fixing?**, **Send back with note** / **Approve work**. |
 | T6, T7 | Flagged task, Needs help | ✅ partly | "Couldn't do" tasks show in Needs attention and the issue goes to the Action Center. "I need help" (M4) is Phase 4. |
-| **C1** | Calendar: Month | ✅ (tasks for now) | As designed: month arrows, Today, filters, Month/Week, today in a saffron circle. Entries are the temple's tasks until **Google Calendar sync in Phase 3** (agreed). |
+| **C1** | Calendar: Month | ✅ | As designed: month arrows, Today, filters, Month/Week, today in a saffron circle. Entries are the temple's tasks until **Google Calendar sync in Phase 3** (agreed). |
 | **C3** | Day opened | ✅ | Click a day: everything on it with time, place, person and status; **+ Add on [date]**; *Open in Google Calendar* switches on in Phase 3. C2 Week and C5 Event details are still to design. |
 | **P1** | People | ✅ | "x of y on site" bar with who isn't in yet; search; role filter; one table grouped **Staff / Volunteers / Committee** with phone, email and today's status (*On site · 08:10*, *Left*, *Not in yet*, *Absent*). |
 | **P2** | Person details | ✅ | Name, status pill, job, **Staff / Volunteer / Committee** switch, phone, email, emergency contact, joined, password reset; **Active** bar with switch off; **Last 7 days** attendance dots; **Today's tasks**. |
@@ -71,7 +74,8 @@
 | **M2** | Your tasks today | ✅ | **Message from Raghu** card (Got it). "You arrived at 2:25 PM · **Undo**" (10 minutes). Tasks with no deadline show as **Any time**. Task cards with coloured edges (red late, saffron safety, green done) and a **Done** button. "Can't do this?", **Coming up**, **Report a problem**, **I'm leaving**, Sign out at the bottom. Volunteers also see **Safety checks** to sign off. |
 | M3, M4 | Task opened, I need help | ◻ Phase 4 | Today "Done" works straight from the card. |
 | M5 | Report a problem | ✅ | Built in Phase 2 (sheet); restyle to the new look when M5 is designed. |
-| M7, M13 | Book a hall, Request sent | ◻ Phase 3 | Needs bookings + Temple Rules. |
+| **M7** | Request a booking | ✅ (Phase 3) | Hall/room tiles, date, time, guests, food, contact, the Temple Rules checklist (Send unlocks at 6 of 6), free/busy check. |
+| **M13** | Request sent + My bookings | ✅ (Phase 3) | Reference, summary, "Waiting for approval", rules agreed; my requests with Cancel. |
 | **M8** | I'm leaving | ✅ | "Leave now?" lists any tasks not done, **Yes, I'm leaving** / **No, stay**. If they're the **last one out**, they must tick lamps, gas and doors; leaving without ticking tells the chairman (app + email). |
 | M9–M12 | Last one out, After leaving, Safety checks, Language | ✅ partly | Last-one-out and safety checks work (above). Language is not started. |
 
@@ -80,7 +84,7 @@
 | ID | Page | Built | Notes |
 |---|---|---|---|
 | **AC1 (phone)** | Needs you | ✅ | On a phone, the chairman/committee app opens "N things need you": on site, tasks done, overdue; one button per card (Remind, Sign off, Assign Harish, Review); Done today; Broadcast and Ask AI. |
-| AC2 (phone) | Review a booking | ◻ Phase 3 | Needs bookings. |
+| AC2 (phone) | Review a booking | ✅ (Phase 3) | "Hall booking" cards in Needs you; Review opens the booking. |
 
 ### Public pages
 

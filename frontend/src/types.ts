@@ -82,6 +82,7 @@ export interface Task {
   status: TaskStatus
   due_at: string | null // null = no deadline ("any time")
   recurrence: Recurrence
+  booking_id?: number | null // prep task for a booking (Phase 3)
   series_id: number | null
   completed_by: number | null
   completed_by_name: string | null
@@ -130,6 +131,7 @@ export interface TaskSummary {
   flagged: number
   open_issues: number
   pending_registrations: number
+  pending_bookings: number
 }
 
 export type TaskView = 'open' | 'overdue' | 'signoff' | 'flagged' | 'done' | 'all' | 'today' | 'mine'
@@ -229,4 +231,107 @@ export interface AuditEntry {
   target_name: string | null
   attendance_name: string | null
   issue_text: string | null
+}
+
+// ---------- Phase 3: bookings ----------
+
+export type ResourceKind = 'hall' | 'room' | 'mandir' | 'kitchen' | 'space' | 'other'
+
+export interface Resource {
+  id: number
+  name: string
+  kind: ResourceKind
+  capacity: number | null
+  notes: string | null
+  is_active: boolean
+  sort_order: number
+}
+
+export interface TempleRule {
+  id: number
+  category: string
+  text: string
+  ask_requester: boolean
+  is_active: boolean
+  sort_order: number
+  updated_by_name?: string | null
+  updated_at: string
+}
+
+export type BookingStatus = 'pending' | 'approved' | 'declined' | 'cancelled'
+
+export interface Booking {
+  id: number
+  resource_id: number
+  resource_name: string
+  resource_kind: ResourceKind
+  resource_capacity: number | null
+  kind: 'booking' | 'event'
+  title: string
+  starts_at: string
+  ends_at: string
+  guests: number | null
+  food: boolean
+  contact_name: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  organisation: string | null
+  notes: string | null
+  deposit_paid: boolean
+  status: BookingStatus
+  source: 'mobile' | 'desk'
+  requested_by: number | null
+  requested_by_name: string | null
+  rules_agreed: number[]
+  rules_agreed_at: string | null
+  reviewed_by_name: string | null
+  reviewed_at: string | null
+  decision_note: string | null
+  task_count: number
+  created_at: string
+}
+
+export interface BookingCheck {
+  recommendation: 'approve' | 'decline'
+  summary: string
+  problems: string[]
+  clashes: { id: number; title: string; starts_at: string; ends_at: string }[]
+  rules_total: number
+  rules_agreed: number
+  free: boolean
+}
+
+export interface BookingDetail {
+  booking: Booking
+  rules: (Pick<TempleRule, 'id' | 'text'> & { agreed: boolean })[]
+  check?: BookingCheck
+  prep_tasks?: { title: string; assigned_group: TaskGroup; due_at: string; requires_verification: boolean }[]
+  tasks?: { id: number; title: string; status: TaskStatus; assigned_group: TaskGroup | null; due_at: string | null }[]
+}
+
+export interface BookingInput {
+  resource_id: number
+  kind?: 'booking' | 'event'
+  title: string
+  starts_at: string
+  ends_at: string
+  guests: number | null
+  food: boolean
+  contact_name: string
+  contact_phone: string
+  contact_email?: string
+  organisation?: string
+  notes?: string
+  deposit_paid?: boolean
+  rules_agreed?: number[]
+  notify_staff?: boolean
+}
+
+export interface ScheduleItem {
+  id: number
+  kind: 'booking' | 'event'
+  title: string
+  starts_at: string
+  ends_at: string
+  resource_name: string
 }

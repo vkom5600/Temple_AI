@@ -19,6 +19,9 @@ import IssuesPage from './pages/admin/IssuesPage'
 import SignoffsPage from './pages/admin/SignoffsPage'
 import WhosOnPage from './pages/admin/WhosOnPage'
 import StaffHome from './pages/staff/StaffHome'
+import BookPage from './pages/staff/BookPage'
+import MyBookingsPage from './pages/staff/MyBookingsPage'
+import RulesPage from './pages/admin/RulesPage'
 
 export default function App() {
   return (
@@ -34,6 +37,7 @@ export default function App() {
               <Route path="action-center" element={<ActionCenterPage />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="rules" element={<RulesPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="issues" element={<IssuesPage />} />
               <Route path="signoffs" element={<SignoffsPage />} />
@@ -44,6 +48,8 @@ export default function App() {
 
             <Route path="/staff" element={<RequireRole roles={['staff', 'volunteer']}><StaffLayout /></RequireRole>}>
               <Route index element={<StaffHome />} />
+              <Route path="book" element={<BookPage />} />
+              <Route path="bookings" element={<MyBookingsPage />} />
             </Route>
 
             <Route path="*" element={<GoHome />} />

@@ -1,6 +1,7 @@
 import { api } from './client'
 import type {
-  AttendanceDay, AttendanceInput, AuditEntry, BroadcastAudience, ClosingChecks, MyAttendance,
+  AttendanceDay, AttendanceInput, AuditEntry, Booking, BookingDetail, BookingInput, BroadcastAudience, ClosingChecks, MyAttendance,
+  Resource, ScheduleItem, TempleRule,
   AppNotification, AuthUser, Issue, RegisterInput, Setting, Task, TaskComment, TaskInput, TaskSummary, TaskView, User, UserInput,
 } from '../types'
 
@@ -93,4 +94,36 @@ export const attendanceApi = {
   save: (userId: number, date: string, input: AttendanceInput) =>
     api<{ message: string }>(`/attendance/${userId}/${date}`, { method: 'PUT', body: input }),
   remove: (userId: number, date: string) => api<{ message: string }>(`/attendance/${userId}/${date}`, { method: 'DELETE' }),
+}
+
+// ---------- Phase 3: bookings, halls and rooms, Temple Rules ----------
+
+type BookingResult = { booking: Booking; message: string }
+
+export const bookingsApi = {
+  list: (params: { from?: string; to?: string; status?: string } = {}) => {
+    const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString()
+    return api<{ bookings: Booking[] }>(`/bookings${query ? `?${query}` : ''}`)
+  },
+  schedule: (date?: string) => api<{ bookings: ScheduleItem[] }>(`/bookings/schedule${date ? `?date=${date}` : ''}`),
+  get: (id: number) => api<BookingDetail>(`/bookings/${id}`),
+  check: (input: { resource_id: number; starts_at: string; ends_at: string; guests?: number | null }) =>
+    api<{ free: boolean; clashes: { title: string; starts_at: string; ends_at: string }[]; problems: string[] }>('/bookings/check', { method: 'POST', body: input }),
+  create: (input: BookingInput) => api<BookingResult>('/bookings', { method: 'POST', body: input }),
+  approve: (id: number, createTasks = true) => api<BookingResult>(`/bookings/${id}/approve`, { method: 'PATCH', body: { create_tasks: createTasks } }),
+  decline: (id: number, reason: string) => api<BookingResult>(`/bookings/${id}/decline`, { method: 'PATCH', body: { reason } }),
+  cancel: (id: number, reason?: string) => api<BookingResult>(`/bookings/${id}/cancel`, { method: 'PATCH', body: { reason } }),
+  ask: (id: number, question: string) => api<{ message: string }>(`/bookings/${id}/ask`, { method: 'POST', body: { question } }),
+}
+
+export const resourcesApi = {
+  list: (all = false) => api<{ resources: Resource[] }>(`/resources${all ? '?all=1' : ''}`),
+  create: (input: Partial<Resource>) => api<{ resource: Resource; message: string }>('/resources', { method: 'POST', body: input }),
+  update: (id: number, input: Partial<Resource>) => api<{ resource: Resource; message: string }>(`/resources/${id}`, { method: 'PUT', body: input }),
+}
+
+export const rulesApi = {
+  list: (all = false) => api<{ rules: TempleRule[] }>(`/rules${all ? '?all=1' : ''}`),
+  create: (input: Partial<TempleRule>) => api<{ rule: TempleRule; message: string }>('/rules', { method: 'POST', body: input }),
+  update: (id: number, input: Partial<TempleRule>) => api<{ rule: TempleRule; message: string }>(`/rules/${id}`, { method: 'PUT', body: input }),
 }

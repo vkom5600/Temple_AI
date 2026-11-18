@@ -1191,3 +1191,119 @@ button.sched-what:hover { text-decoration: underline; }
 .msg-head span { display: inline-flex; align-items: center; gap: 6px; color: var(--saf-d); font-weight: 600; font-size: 14.5px; }
 .msg-card.urgent .msg-head span { color: var(--red); }
 .msg-card p { margin: 8px 0 0; font-size: 16px; color: var(--ink); line-height: 1.45; }
+
+/* =========================== Phase 3: bookings =========================== */
+/* AC2 review */
+.booking-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; background: #faf8f4; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.booking-facts .full { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 12px; }
+.booking-facts b { display: flex; align-items: center; gap: 8px; color: var(--ind-d); font-size: 16px; margin-top: 4px; }
+.booking-facts b svg { color: var(--saf-d); }
+.booking-facts small { display: block; color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+.rules-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+.rules-card .dsec-head svg { color: var(--green-mid); }
+.rules-grid { list-style: none; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; }
+.rules-grid li { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; color: var(--ink); }
+.rule-tick { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--green-mid); color: #fff; margin-top: 1px; }
+.rules-grid li.no .rule-tick { background: var(--red-mid); }
+.recommend { background: var(--saf-bg); border: 1px solid var(--saf-line); color: #7a4300; border-radius: 12px; padding: 12px 16px; font-size: 15px; }
+.recommend.decline { background: var(--red-soft); border-color: var(--red-line); color: var(--red); }
+.prep ol { list-style: none; margin: 8px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; }
+.prep ol.off { opacity: .45; }
+.prep li { display: flex; gap: 12px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+.prep li:first-child { border-top: 0; }
+.prep .n { width: 24px; height: 24px; border-radius: 50%; background: var(--well); color: var(--ind); font-size: 12.5px; font-weight: 700; display: grid; place-items: center; flex: none; }
+.prep b { display: block; color: var(--ind-d); font-weight: 600; font-size: 15px; }
+.prep small { color: var(--muted); font-size: 13px; }
+
+/* C4 desk form */
+.free-ok { display: flex; align-items: center; gap: 8px; background: var(--green-soft); border: 1px solid var(--green-line); color: var(--green); border-radius: 10px; padding: 10px 14px; font-size: 14.5px; font-weight: 500; }
+.free-no { display: flex; align-items: center; gap: 8px; background: var(--red-soft); border: 1px solid var(--red-line); color: var(--red); border-radius: 10px; padding: 10px 14px; font-size: 14.5px; font-weight: 500; }
+.rule-tip { display: flex; gap: 10px; align-items: flex-start; background: #f6f3ed; border-radius: 10px; padding: 12px 14px; color: var(--ink-2); font-size: 14px; }
+.rule-tip svg { color: var(--ind); flex: none; margin-top: 2px; }
+
+/* Calendar entries: booking (indigo), waiting (saffron, dashed), temple event (green), task (grey) */
+.mcal-item.wait { background: #fff4e3; border-left-color: var(--saf); color: #8a4a00; border-style: dashed; border-width: 0 0 0 3px; }
+.mcal-item.evt { background: var(--green-soft); border-left-color: var(--green-mid); color: var(--green); }
+.mcal-item.task { background: #f3f2ef; border-left-color: #b0adb8; color: var(--ink-2); }
+.day-entry.evt { border-left-color: var(--green-mid); background: #f4faf3; }
+.day-entry.task { border-left-color: #b0adb8; }
+
+/* "One view – allocation" */
+.alloc { display: flex; flex-direction: column; gap: 12px; }
+.alloc-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+.alloc-summary b { color: var(--ind-d); }
+.alloc-key { width: 14px; height: 10px; border-radius: 3px; background: var(--ind); display: inline-block; }
+.alloc-key.wait { background: #fff4e3; border: 1.5px dashed var(--saf); }
+.alloc-key.evt { background: var(--green-mid); }
+.alloc-grid { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; }
+.alloc-head, .alloc-row { display: grid; grid-template-columns: 170px minmax(720px, 1fr); }
+.alloc-head { background: #faf8f4; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+.alloc-hours { display: grid; grid-template-columns: repeat(16, 1fr); }
+.alloc-hours span { font-size: 12px; color: var(--muted); padding: 10px 0 8px 4px; border-left: 1px solid var(--line-2); font-variant-numeric: tabular-nums; }
+.alloc-row { border-bottom: 1px solid var(--line-2); min-height: 64px; }
+.alloc-row:last-child { border-bottom: 0; }
+.alloc-name { padding: 12px 16px; border-right: 1px solid var(--line); background: #fdfcfa; display: flex; flex-direction: column; justify-content: center; }
+.alloc-name b { color: var(--ind-d); font-size: 15px; }
+.alloc-name small { color: var(--muted); font-size: 12.5px; }
+.alloc-track { position: relative; cursor: copy; min-height: 64px; }
+.alloc-track:hover { background: #fbfaf6; }
+.alloc-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-2); }
+.alloc-now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--saf); z-index: 2; }
+.alloc-block { position: absolute; top: 8px; bottom: 8px; border: 0; border-radius: 8px; background: var(--ind); color: #fff; text-align: left; padding: 6px 10px; overflow: hidden; cursor: pointer; z-index: 1; display: flex; flex-direction: column; justify-content: center; min-width: 44px; }
+.alloc-block b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alloc-block small { font-size: 12px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alloc-block.wait { background: #fff4e3; color: #7a4300; border: 2px dashed var(--saf); }
+.alloc-block.evt { background: var(--green-mid); }
+.alloc-block:hover { filter: brightness(1.08); }
+@media (max-width: 760px) { .booking-facts, .rules-grid { grid-template-columns: 1fr; } }
+.sched-bookings { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.sched-booking { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px 12px; text-align: left; font: inherit; color: var(--ind-d); cursor: pointer; }
+.sched-booking:hover { border-color: var(--ind); }
+.sched-booking b { font-variant-numeric: tabular-nums; font-size: 14px; white-space: nowrap; }
+.sched-booking .grow { font-weight: 500; min-width: 0; }
+.sched-booking small { display: block; color: var(--green); font-size: 12.5px; }
+.sched-booking.live { border-color: var(--green-line); background: #f6fbf5; }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green-mid); box-shadow: 0 0 0 3px var(--green-soft); flex: none; }
+.kpi-box { display: flex; align-items: center; gap: 10px; background: #fdf9f1; border: 1px solid #f0e6d2; border-radius: 10px; padding: 12px 14px; color: var(--ind-d); font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
+.kpi-box svg { color: var(--saf); }
+/* AC4 Temple Rules */
+.rules-page { padding: 8px 28px 18px; max-width: 860px; }
+.rule-group { padding: 18px 0 6px; }
+.rule-group-head { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.rule-group-head span:last-child { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.rule-row { width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px 6px; border: 0; border-bottom: 1px solid var(--line-2); background: none; font: inherit; font-size: 16px; color: var(--ind-d); text-align: left; cursor: pointer; }
+.rule-row:hover { background: #fbfaf6; }
+.rule-row.off { color: var(--muted); }
+.rule-n { width: 26px; color: var(--muted); font-weight: 600; flex: none; text-align: right; }
+.rule-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 16px; color: var(--ink-2); font-size: 13.5px; font-weight: 600; }
+.how-box { display: flex; gap: 12px; align-items: flex-start; background: #f6f3ed; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; color: var(--ink-2); max-width: 860px; font-size: 15px; }
+.how-box svg { color: var(--saf-d); flex: none; margin-top: 2px; }
+/* M7 / M13 phone booking */
+.m-subbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m-subbar b { font-size: 19px; color: var(--ind-d); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { position: relative; background: #fff; border: 1.5px solid var(--field); border-radius: 12px; padding: 11px 12px; text-align: left; font: inherit; cursor: pointer; }
+.tile b { display: block; font-size: 15px; color: var(--ind-d); }
+.tile span { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.tile.on { background: var(--ind-d); border-color: var(--ind-d); }
+.tile.on b { color: #fff; } .tile.on span { color: #c9c6e8; }
+.tile-check { position: absolute; right: 10px; top: 50%; margin-top: -10px; width: 20px; height: 20px; border-radius: 50%; background: #fff; color: var(--ind-d); display: grid; place-items: center; }
+.rules-check { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.rules-check > .row b { color: var(--ind-d); font-size: 16.5px; }
+.check { display: flex; gap: 12px; align-items: flex-start; background: var(--well); border: 1.5px solid transparent; border-radius: 12px; padding: 12px; cursor: pointer; }
+.check.on { border-color: var(--ind-d); background: #fff; }
+.check input { position: absolute; opacity: 0; pointer-events: none; }
+.check .cb { width: 24px; height: 24px; border-radius: 7px; border: 2px solid #c8c5d0; background: #fff; color: #fff; display: grid; place-items: center; flex: none; }
+.check.on .cb { background: var(--ind-d); border-color: var(--ind-d); }
+.check b { font-size: 15px; display: block; line-height: 1.3; color: var(--ind-d); }
+.check span span { font-size: 13px; color: var(--muted); }
+.check:focus-within { box-shadow: 0 0 0 3px var(--ind-soft); }
+.sent-card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.sent-card h1 { font-size: 26px; }
+.sent-tick { width: 60px; height: 60px; border-radius: 50%; background: var(--green-soft); color: var(--green-mid); display: grid; place-items: center; box-shadow: 0 0 0 8px #f1f8ef; margin-bottom: 6px; }
+.sent-summary { width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.sent-title { font-size: 18px; color: var(--ind-d); }
+.kv { display: flex; gap: 12px; align-items: flex-start; }
+.kv svg { color: var(--saf-d); margin-top: 3px; flex: none; }
+.kv b { display: block; color: var(--ind-d); font-size: 15px; }
+.kv small { color: var(--muted); font-size: 13px; }

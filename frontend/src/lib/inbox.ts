@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { attendanceApi, issuesApi, tasksApi, usersApi } from '../api/endpoints'
+import { attendanceApi, bookingsApi, issuesApi, tasksApi, usersApi } from '../api/endpoints'
 import { TASK_GROUP_LABELS } from '../constants'
 import { suggestGroup, suggestedTitle } from './tasks'
-import type { AttendanceDay, Issue, Task, TaskInput, User } from '../types'
+import type { AttendanceDay, BookingDetail, Issue, Task, TaskInput, User } from '../types'
 
 // Everything waiting for the chairman / committee, in one list.
 // Used by H1 Home ("Needs your attention") and AC1 Action Center, so both agree.
@@ -10,8 +10,9 @@ import type { AttendanceDay, Issue, Task, TaskInput, User } from '../types'
 //   problem  – a reported issue            → Assign <name> / Create task / Mark fixed
 //   signoff  – a safety task to check      → Sign off / Review
 //   signups  – people who registered       → Review (chairman)
+//   booking  – a hall / room request       → Decline / Approve (AC2)
 
-export type InboxKind = 'overdue' | 'problem' | 'signoff' | 'signups'
+export type InboxKind = 'overdue' | 'problem' | 'signoff' | 'signups' | 'booking'
 export type InboxFilter = 'all' | 'approvals' | 'problems' | 'overdue'
 
 export interface InboxItem {
@@ -22,6 +23,7 @@ export interface InboxItem {
   task?: Task
   issue?: Issue
   people?: User[]
+  booking?: BookingDetail
   helper?: User // who to give a problem to (someone with the right job, on site if possible)
 }
 
@@ -46,8 +48,10 @@ export function useInbox(isChairman: boolean) {
       usersApi.list(),
       attendanceApi.day().catch(() => null),
       issuesApi.list('handled').catch(() => ({ issues: [] as Issue[] })),
+      // Booking requests, each with its rule check (there are only ever a few waiting)
+      bookingsApi.list({ status: 'pending' }).then((r) => Promise.all(r.bookings.map((b) => bookingsApi.get(b.id)))).catch(() => [] as BookingDetail[]),
     ])
-      .then(([overdue, issues, signoffs, users, day, handled]) => {
+      .then(([overdue, issues, signoffs, users, day, handled, bookings]) => {
         setError('')
         const people = users.users
         const onSite = new Set(day?.people.filter((p) => p.state === 'here').map((p) => p.user_id))
@@ -66,6 +70,9 @@ export function useInbox(isChairman: boolean) {
         }
         for (const t of signoffs.tasks) {
           items.push({ key: `s${t.id}`, kind: 'signoff', filter: 'approvals', rank: 2, task: t })
+        }
+        for (const detail of bookings) {
+          items.push({ key: `b${detail.booking.id}`, kind: 'booking', filter: 'approvals', rank: 2, booking: detail })
         }
         const pending = people.filter((p) => p.approval_status === 'pending')
         if (isChairman && pending.length) {

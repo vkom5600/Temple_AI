@@ -19,7 +19,8 @@ import { startRepeatingTasksJob } from "./jobs/repeatingTasksJob.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import { startClosingCheckJob } from "./jobs/closingCheckJob.js";
 // Phase 3
-// import bookingRoutes from "./routes/bookingRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+import { resourceRouter, ruleRouter } from "./routes/resourceRoutes.js";
 // import calendarRoutes from "./routes/calendarRoutes.js";
 // import aiRoutes from "./routes/aiRoutes.js";
 // Phase 4
@@ -41,7 +42,9 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/issues", issueRoutes);
 app.use("/api/attendance", attendanceRoutes);
-// app.use("/api/bookings", bookingRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/resources", resourceRouter);
+app.use("/api/rules", ruleRouter);
 // app.use("/api/calendar", calendarRoutes);
 // app.use("/api/ai", aiRoutes);
 app.use("/api/audit-logs", auditRoutes);
