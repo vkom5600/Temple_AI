@@ -1,4 +1,6 @@
 import pool from "../config/db.js";
+import { aiEnabled, askText } from "../services/aiService.js";
+import { TIMEZONE } from "../services/taskService.js";
 import { ADMIN_ROLES } from "../middleware/authMiddleware.js";
 import { logAudit } from "../services/auditService.js";
 import { notify } from "../services/notificationService.js";
@@ -107,6 +109,14 @@ export const getBooking = async (req, res) => {
     const response = { success: true, booking, rules: rules.map((r) => ({ ...r, agreed: agreed.has(r.id) })) };
     if (isAdmin(req.user)) {
         response.check = await checkBooking(booking);
+        // AC2: Temple AI's short note on a pending request (only with a Claude key; written once)
+        if (booking.status === "pending" && !booking.ai_note && aiEnabled()) {
+            const note = await writeBookingNote(booking, response.check, rules);
+            if (note) {
+                await pool.query("UPDATE bookings SET ai_note = $1, ai_note_at = NOW() WHERE id = $2", [note, booking.id]);
+                booking.ai_note = note;
+            }
+        }
         response.prep_tasks = booking.status === "pending" ? prepTasksFor(booking) : [];
         response.tasks = (await pool.query(
             "SELECT id, title, status, assigned_group, due_at FROM tasks WHERE booking_id = $1 ORDER BY due_at", [booking.id]
@@ -304,4 +314,21 @@ export const askAboutBooking = async (req, res) => {
     await notify({ userId: booking.requested_by, title: `Question about "${booking.title}"`, message: `${req.user.full_name}: ${question}`, type: "booking" });
     await logAudit({ actorId: req.user.id, action: "booking.question", entityType: "booking", entityId: booking.id, details: { title: booking.title, question } });
     res.json({ success: true, message: `Sent to ${booking.requested_by_name}` });
+};
+
+// The short note Temple AI writes for the committee on a booking request (AC2).
+// Uses only the request, the rule check and the Temple Rules; the committee decides.
+const writeBookingNote = async (booking, check, rules) => {
+    const when = (d) => new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(d));
+    const facts = {
+        request: { title: booking.title, space: booking.resource_name, capacity: booking.resource_capacity, guests: booking.guests, from: when(booking.starts_at), to: when(booking.ends_at), food: booking.food, from_website: booking.source === "web", notes: booking.notes },
+        rule_check: { recommendation: check.recommendation, problems: check.problems, clashes: check.clashes.map((c) => c.title), waiting_requests_same_time: check.pending_overlaps.length, rules_agreed: `${check.rules_agreed} of ${check.rules_total}` },
+        temple_rules: rules.map((r) => r.text),
+    };
+    const r = await askText({
+        system: "You help a Hindu temple's committee review hall and room booking requests. In one or two short, plain sentences, say whether the request looks fine and why, and anything the committee should check or ask the requester (for example capacity, finishing time, food, parking or the deposit). Use only the facts given; never invent details. The committee decides, so don't tell them what to do; suggest. British English, no greeting, no bullet points.",
+        messages: [{ role: "user", content: JSON.stringify(facts) }],
+        maxTokens: 400,
+    });
+    return r.ok && r.text ? r.text.slice(0, 600) : null;
 };

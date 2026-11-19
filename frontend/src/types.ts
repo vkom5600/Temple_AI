@@ -302,6 +302,7 @@ export interface Booking {
   deposit_paid: boolean
   status: BookingStatus
   source: 'mobile' | 'desk' | 'web'
+  ai_note?: string | null // AC2: Temple AI's short note on a pending request (with a Claude key)
   requested_by: number | null
   requested_by_name: string | null
   rules_agreed: number[]

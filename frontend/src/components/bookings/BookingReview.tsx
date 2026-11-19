@@ -144,6 +144,7 @@ export default function BookingReview({ bookingId, onClose, onChanged }: { booki
           {check && pending && (
             <div className={`recommend ${check.recommendation}`}>
               <span className="star">✦</span> <b>Temple AI recommends:</b> {check.summary}
+              {b?.ai_note && <p className="ai-note-text">{b.ai_note}</p>}
             </div>
           )}
 
