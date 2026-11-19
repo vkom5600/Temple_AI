@@ -1557,3 +1557,24 @@ tr.row-open:hover td { background: #fbfaf7; }
 .m-q .q-reply { color: var(--ink-2); line-height: 1.45; }
 .m-q.new { background: #fff8ef; cursor: pointer; }
 .m-q .pill { font-style: normal; margin-left: 6px; }
+
+/* C2 Week view */
+.wcal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.wcal-day { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 6px; min-height: 360px; min-width: 0; }
+.wcal-day.today { border-color: var(--saf); box-shadow: 0 0 0 2px #fde3c2; }
+.wcal-head { display: flex; align-items: baseline; gap: 6px; border: 0; background: none; padding: 2px 4px 8px; border-bottom: 1px solid var(--line-2); cursor: pointer; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+.wcal-head b { font-size: 22px; color: var(--ind-d); letter-spacing: 0; }
+.wcal-day.today .wcal-head b { color: var(--saf-d); }
+.wcal-item { display: flex; flex-direction: column; gap: 1px; text-align: left; border: 0; border-left: 3px solid var(--ind-2); background: #f1f0f8; border-radius: 8px; padding: 6px 8px; cursor: pointer; min-width: 0; }
+.wcal-item small { color: var(--muted); font-size: 11.5px; }
+.wcal-item b { color: var(--ind-d); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.wcal-item span { color: var(--muted); font-size: 12px; }
+.wcal-item.evt { border-left-color: var(--green-mid); background: #eef7ef; }
+.wcal-item.wait { border-left-color: var(--saf); background: #fff5e8; }
+.wcal-item.task { border-left-color: #b0adb8; background: #f6f5f2; }
+.wcal-item.task.done b { text-decoration: line-through; color: var(--muted); }
+.wcal-empty { color: var(--muted); font-size: 12.5px; padding: 4px; }
+@media (max-width: 1100px) { .wcal { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .wcal { grid-template-columns: 1fr; } .wcal-day { min-height: 0; } }
+.prep-open { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 0; background: none; text-align: left; padding: 0; cursor: pointer; min-width: 0; }
+.prep .bar { margin: 4px 0 10px; }

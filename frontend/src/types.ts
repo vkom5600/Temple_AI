@@ -330,7 +330,7 @@ export interface BookingDetail {
   rules: (Pick<TempleRule, 'id' | 'text'> & { agreed: boolean })[]
   check?: BookingCheck
   prep_tasks?: { title: string; assigned_group: TaskGroup; due_at: string; requires_verification: boolean }[]
-  tasks?: { id: number; title: string; status: TaskStatus; assigned_group: TaskGroup | null; due_at: string | null }[]
+  tasks?: { id: number; title: string; status: TaskStatus; assigned_group: TaskGroup | null; assigned_to_name?: string | null; due_at: string | null }[]
 }
 
 export interface BookingInput {

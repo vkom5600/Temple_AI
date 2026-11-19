@@ -24,7 +24,7 @@ import { ukAddDays, ukDate, ukDateKey, ukDay, ukParts, ukSameDay } from '../../l
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const dayKey = (d: Date) => ukDateKey(d)
 type Filter = 'all' | 'bookings' | 'events' | 'waiting' | 'tasks'
-type View = 'month' | 'allocation'
+type View = 'month' | 'week' | 'allocation'
 
 export default function CalendarPage() {
   const { refreshSummary } = useAdminContext()
@@ -77,6 +77,10 @@ export default function CalendarPage() {
   const shiftMonth = (n: number) => setMonth((m) => { const p = ukParts(m); return ukDate(p.y, p.m + n, 1, 12) })
   const shiftDay = (n: number) => setDay((x) => ukAddDays(x, n))
   const open = openDay ? byDay.get(dayKey(openDay)) ?? { b: [], t: [] } : null
+  // C2 Week: Monday to Sunday around the chosen day
+  const dp = ukParts(day)
+  const weekDays = Array.from({ length: 7 }, (_, i) => ukDate(dp.y, dp.m, dp.d - ((dp.wd + 6) % 7) + i, 12))
+  const weekLabel = `${ukDay(weekDays[0], { day: 'numeric', month: 'short' })} – ${ukDay(weekDays[6], { day: 'numeric', month: 'short', year: 'numeric' })}`
   const waiting = (bookings ?? []).filter((b) => b.status === 'pending').length
 
   return (
@@ -103,6 +107,12 @@ export default function CalendarPage() {
             <b>{ukDay(month, { month: 'long', year: 'numeric' })}</b>
             <button className="icon-btn" onClick={() => shiftMonth(1)} aria-label="Next month"><Icon name="chevron-right" size={18} /></button>
           </div>
+        ) : view === 'week' ? (
+          <div className="month-nav">
+            <button className="icon-btn" onClick={() => shiftDay(-7)} aria-label="Previous week"><Icon name="chevron-right" size={18} /></button>
+            <b>{weekLabel}</b>
+            <button className="icon-btn" onClick={() => shiftDay(7)} aria-label="Next week"><Icon name="chevron-right" size={18} /></button>
+          </div>
         ) : (
           <div className="month-nav">
             <button className="icon-btn" onClick={() => shiftDay(-1)} aria-label="Previous day"><Icon name="chevron-right" size={18} /></button>
@@ -116,10 +126,11 @@ export default function CalendarPage() {
           <button className={filter === 'bookings' ? 'on' : ''} onClick={() => setFilter('bookings')}><i className="lg lg-ind" /> Bookings</button>
           <button className={filter === 'events' ? 'on' : ''} onClick={() => setFilter('events')}><i className="lg lg-grn" /> Temple events</button>
           <button className={filter === 'waiting' ? 'on' : ''} onClick={() => setFilter('waiting')}><i className="lg lg-saf" /> Waiting{waiting ? ` (${waiting})` : ''}</button>
-          {view === 'month' && <button className={filter === 'tasks' ? 'on' : ''} onClick={() => setFilter('tasks')}><i className="lg" style={{ background: '#b0adb8' }} /> Tasks</button>}
+          {view !== 'allocation' && <button className={filter === 'tasks' ? 'on' : ''} onClick={() => setFilter('tasks')}><i className="lg" style={{ background: '#b0adb8' }} /> Tasks</button>}
         </div>
         <div className="segmented" style={{ marginLeft: 'auto' }}>
           <button className={view === 'month' ? 'on' : ''} onClick={() => setView('month')}>Month</button>
+          <button className={view === 'week' ? 'on' : ''} onClick={() => setView('week')}>Week</button>
           <button className={view === 'allocation' ? 'on' : ''} onClick={() => setView('allocation')}>Allocation</button>
         </div>
       </div>
@@ -150,6 +161,30 @@ export default function CalendarPage() {
                 {all.slice(0, 3).map((x) => <span key={x.key} className={`mcal-item ${x.cls}`}>{x.label}</span>)}
                 {all.length > 3 && <span className="mcal-more">+{all.length - 3} more</span>}
               </button>
+            )
+          })}
+        </div>
+      ) : view === 'week' ? (
+        <div className="wcal" role="grid" aria-label={`Week of ${weekLabel}`}>
+          {weekDays.map((d) => {
+            const items = byDay.get(dayKey(d)) ?? { b: [], t: [] }
+            const list = [...items.b.map((b) => ({ key: `b${b.id}`, at: b.starts_at, time: `${hhmm(b.starts_at)}–${hhmm(b.ends_at)}`, title: b.title, sub: b.resource_name, cls: b.status === 'pending' ? 'wait' : b.kind === 'event' ? 'evt' : '', open: () => setViewingBooking(b.id) })),
+              ...items.t.map((t) => ({ key: `t${t.id}`, at: t.due_at!, time: hhmm(t.due_at), title: t.title, sub: t.area ?? '', cls: `task ${isFinished(t) ? 'done' : ''}`, open: () => setViewingTask(t.id) }))]
+              .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+            const isToday = dayKey(d) === today
+            return (
+              <div key={d.toISOString()} className={`wcal-day ${isToday ? 'today' : ''}`} role="gridcell">
+                <button className="wcal-head" onClick={() => setOpenDay(d)} aria-label={`Open ${ukDay(d, { weekday: 'long', day: 'numeric', month: 'long' })}`}>
+                  <span>{ukDay(d, { weekday: 'short' })}</span><b>{ukParts(d).d}</b>
+                </button>
+                {festivals.filter((f) => f.date === toDateInput(d)).map((f) => <span key={`f${f.id}`} className={`mcal-fest ${f.confirmed ? '' : 'tbc'}`}>{f.name}</span>)}
+                {list.map((x) => (
+                  <button key={x.key} className={`wcal-item ${x.cls}`} onClick={x.open}>
+                    <small>{x.time}</small><b>{x.title}</b>{x.sub && <span>{x.sub}</span>}
+                  </button>
+                ))}
+                {!list.length && <span className="wcal-empty">Free</span>}
+              </div>
             )
           })}
         </div>

@@ -119,7 +119,8 @@ export const getBooking = async (req, res) => {
         }
         response.prep_tasks = booking.status === "pending" ? prepTasksFor(booking) : [];
         response.tasks = (await pool.query(
-            "SELECT id, title, status, assigned_group, due_at FROM tasks WHERE booking_id = $1 ORDER BY due_at", [booking.id]
+            `SELECT t.id, t.title, t.status, t.assigned_group, t.due_at, t.requires_verification, u.full_name AS assigned_to_name
+             FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to WHERE t.booking_id = $1 ORDER BY t.due_at`, [booking.id]
         )).rows;
     }
     res.json(response);

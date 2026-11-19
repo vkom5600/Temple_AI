@@ -7,6 +7,8 @@ import { hhmm } from '../../lib/tasks'
 import { useToast } from '../Toast'
 import { ErrorNote, Icon, Modal, Spinner } from '../ui'
 import type { BookingDetail } from '../../types'
+import TaskDetails from '../tasks/TaskDetails'
+import { ukDay } from '../../lib/uk'
 
 // AC2 Booking review (designs: screens/12_AC2, 13_AC2): the request, the Temple Rules the
 // requester agreed, the recommendation, and the prep tasks approval adds.
@@ -19,6 +21,7 @@ export default function BookingReview({ bookingId, onClose, onChanged }: { booki
   const [mode, setMode] = useState<'view' | 'reject' | 'ask' | 'cancel'>('view')
   const [note, setNote] = useState('')
   const [withTasks, setWithTasks] = useState(true)
+  const [openTask, setOpenTask] = useState<number | null>(null)
 
   const load = useCallback(() => {
     bookingsApi.get(bookingId).then(setDetail).catch((e: Error) => setError(e.message))
@@ -73,7 +76,7 @@ export default function BookingReview({ bookingId, onClose, onChanged }: { booki
         </div>
         <span className="muted small" style={{ textAlign: 'right' }}>Any committee member can decide</span>
       </div>
-    ) : b.status === 'approved' ? (
+    ) : b.status === 'approved' && new Date(b.ends_at).getTime() > Date.now() ? (
       <button className="btn btn-red-outline push-left" onClick={() => setMode('cancel')}>Cancel this booking</button>
     ) : null
   )
@@ -166,19 +169,30 @@ export default function BookingReview({ bookingId, onClose, onChanged }: { booki
             </section>
           )}
 
-          {detail.tasks && detail.tasks.length > 0 && (
-            <section className="prep">
-              <span className="ulabel">Prep tasks</span>
-              <ol>
-                {detail.tasks.map((t, i) => (
-                  <li key={t.id}>
-                    <span className="n">{i + 1}</span>
-                    <span className="grow"><b>{t.title}</b><small>{t.assigned_group ? TASK_GROUP_LABELS[t.assigned_group] : ''} · {hhmm(t.due_at)} · {t.status === 'done' ? 'done' : t.status === 'cancelled' ? 'cancelled' : 'to do'}</small></span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
+          {/* C5 event details: the jobs for this event, with progress; each opens the task */}
+          {detail.tasks && detail.tasks.length > 0 && (() => {
+            const live = detail.tasks.filter((t) => t.status !== 'cancelled')
+            const doneN = live.filter((t) => t.status === 'done' || t.status === 'awaiting_signoff').length
+            return (
+              <section className="prep">
+                <div className="dsec-head"><span className="ulabel">Tasks for this {b?.kind === 'event' ? 'event' : 'booking'}</span><small className="muted">{doneN} of {live.length} done</small></div>
+                <div className="bar"><i style={{ width: `${live.length ? (doneN / live.length) * 100 : 0}%` }} /></div>
+                <ol>
+                  {detail.tasks.map((t, i) => (
+                    <li key={t.id}>
+                      <span className="n">{i + 1}</span>
+                      <button className="grow prep-open" onClick={() => setOpenTask(t.id)}>
+                        <b>{t.title}</b>
+                        <small>{t.assigned_to_name ?? (t.assigned_group ? TASK_GROUP_LABELS[t.assigned_group] : '')} · {t.due_at ? `${ukDay(new Date(t.due_at))}, ${hhmm(t.due_at)}` : "Any time"} · {t.status === 'done' ? 'done' : t.status === 'awaiting_signoff' ? 'waiting for a second check' : t.status === 'flagged' ? "couldn't do" : t.status === 'cancelled' ? 'cancelled' : 'to do'}</small>
+                      </button>
+                      <Icon name="chevron-right" size={16} />
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )
+          })()}
+          {openTask && <TaskDetails taskId={openTask} onClose={() => setOpenTask(null)} onChanged={() => { load(); onChanged() }} />}
 
           {mode === 'reject' && (
             <label className="field"><span className="label">Why? <span className="muted">(sent to them)</span></span>
