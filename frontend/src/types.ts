@@ -91,6 +91,7 @@ export interface Task {
   verified_by_name: string | null
   verified_at: string | null
   last_reminded_at: string | null
+  last_reminded_by_name?: string | null
   reminder_count: number
   created_by: number | null
   created_by_name: string | null

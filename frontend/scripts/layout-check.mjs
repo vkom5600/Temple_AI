@@ -52,6 +52,7 @@ const PAGES = [
   ['tasks today', '/admin/tasks', 'raghu', ALL],
   ['tasks: new task', '/admin/tasks', 'raghu', ALL, clickText('New task')],
   ['tasks: details', '/admin/tasks', 'raghu', ALL, clickSel('.t-title button')],
+  ['action center: done today', '/admin/action-center', 'raghu', ['desktop', 'phone'], `(async () => { ${clickSel('.done-toggle')}; await new Promise((r) => setTimeout(r, 500)); ${clickSel('[role="button"][aria-expanded]')} })()`],
   ['tasks upcoming', '/admin/tasks?tab=upcoming', 'raghu', ['desktop', 'tablet']],
   ['tasks all', '/admin/tasks?tab=all', 'raghu', ALL],
   ['calendar month', '/admin/calendar', 'raghu', ALL],
@@ -60,6 +61,8 @@ const PAGES = [
   ['calendar allocation', '/admin/calendar', 'raghu', ['desktop', 'tablet'], `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Allocation')?.click()`],
   ['people', '/admin/people', 'raghu', ALL],
   ['people: person', '/admin/people', 'raghu', ['desktop', 'tablet'], clickSel('tr.prow')],
+  ['people: person menu', '/admin/people', 'raghu', ['desktop', 'phone'], `(async () => { ${clickSel('tr.prow')}; await new Promise((r) => setTimeout(r, 500)); ${clickSel('.kebab .icon-btn')} })()`],
+  ['people: remove person', '/admin/people', 'raghu', ['desktop', 'phone'], `(async () => { ${clickSel('tr.prow')}; await new Promise((r) => setTimeout(r, 500)); ${clickSel('.kebab .icon-btn')}; await new Promise((r) => setTimeout(r, 500)); ${clickText('Remove person')} })()`],
   ['people: sign-ups', '/admin/people?review=signups', 'raghu', ALL],
   ['reports', '/admin/reports', 'raghu', ALL],
   ['reports: activity log', '/admin/reports', 'raghu', ['desktop', 'tablet'], clickText('Activity log')],
@@ -68,8 +71,10 @@ const PAGES = [
   ['issue history', '/admin/issues', 'raghu', ['desktop', 'tablet']],
   ['settings', '/admin/settings', 'raghu', ['desktop', 'tablet']],
   ['committee home', '/admin', 'meena', ['desktop', 'phone']],
+  ['committee: person', '/admin/people', 'meena', ['desktop', 'phone'], clickSel('tr.prow')],
   ['staff phone (priest)', '/staff', 'anil', ['phone', 'tablet']],
   ['staff: open task', '/staff', 'anil', ['phone'], `(async () => { ${clickText("I'm here")}; await new Promise((r) => setTimeout(r, 1200)); ${clickText('Start')} })()`],
+  ['staff: done today', '/staff', 'anil', ['phone'], `(async () => { ${clickSel('.done-today')}; await new Promise((r) => setTimeout(r, 500)); ${clickSel('.m-task.done .m-task-head')} })()`],
   ['staff phone (volunteer)', '/staff', 'priya', ['phone']],
   ['staff: book a hall', '/staff/book', 'priya', ['phone', 'tablet']],
   ['staff: my bookings', '/staff/bookings', 'priya', ['phone']],
@@ -120,14 +125,15 @@ const CHECK = `(() => {
     for (const rect of range.getClientRects()) {
       if (rect.width < 1 || rect.height < 1) continue;
       const c = clip(rect, el);
-      if (c) boxes.push({ el, text: text.slice(0, 40), ...c });
+      // Open menus float above the page on purpose, so they only count against each other
+      if (c) boxes.push({ el, text: text.slice(0, 40), layer: el.closest('[role="menu"], .kebab-menu') ? 'menu' : 'page', ...c });
     }
   }
   const seen = new Set();
   for (let i = 0; i < boxes.length; i++) {
     for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i], b = boxes[j];
-      if (a.el === b.el) continue;
+      if (a.el === b.el || a.layer !== b.layer) continue;
       const w = Math.min(a.r, b.r) - Math.max(a.l, b.l);
       const h = Math.min(a.b, b.b) - Math.max(a.t, b.t);
       if (w > 3 && h > 3) {

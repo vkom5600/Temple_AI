@@ -410,9 +410,9 @@ export const remindTask = async (req, res) => {
 
     await pool.query(
         `UPDATE tasks
-         SET last_reminded_at = NOW(), reminder_count = reminder_count + 1
+         SET last_reminded_at = NOW(), reminder_count = reminder_count + 1, last_reminded_by = $2
          WHERE id = $1`,
-        [task.id]
+        [task.id, req.user.id]
     );
 
     const sent = await notifyAssignees(task, {

@@ -8,7 +8,8 @@ import {
     approveUser,
     rejectUser,
     deactivateUser,
-    activateUser
+    activateUser,
+    removeUser
 } from "../controllers/userController.js";
 
 import {
@@ -32,5 +33,6 @@ router.patch("/:id/approve", authorizeRoles("chairman"), approveUser);
 router.patch("/:id/reject", authorizeRoles("chairman"), rejectUser);
 router.patch("/:id/deactivate", authorizeRoles("chairman"), deactivateUser);
 router.patch("/:id/activate", authorizeRoles("chairman"), activateUser);
+router.delete("/:id", authorizeRoles("chairman"), removeUser);
 
 export default router;

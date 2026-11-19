@@ -16,6 +16,8 @@ import TaskDetails from '../../components/tasks/TaskDetails'
 import BookingReview from '../../components/bookings/BookingReview'
 import { bookingSlot } from '../../lib/bookings'
 import type { Task, TaskSummary } from '../../types'
+import HandledIssue from '../../components/HandledIssue'
+import RemindButton from '../../components/tasks/RemindButton'
 
 // AC1 Needs you (phone) – Rao garu's phone (designs: screens/42_AC1, final review p.12–13).
 // The same admin app, laid out for a phone: everything waiting, one button per card.
@@ -79,9 +81,7 @@ export default function PhoneNeedsYou({ context }: Props) {
             <button className="done-toggle" style={{ alignSelf: 'center' }} onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>
               Done today ({inbox.handledToday.length}) <Icon name="chevron-down" size={16} />
             </button>
-            {showDone && inbox.handledToday.map((i) => (
-              <div key={i.id} className="m-task s-grn done"><div className="txt"><div className="t">{i.description}</div><div className="m">{i.status === 'converted' ? `Given to ${i.created_task_assignee_name ?? i.created_task_group}` : `Fixed · ${i.resolved_by_name}`}</div></div></div>
-            ))}
+            {showDone && inbox.handledToday.map((i) => <HandledIssue key={i.id} issue={i} phone onOpenTask={setViewing} />)}
           </>
         )}
 
@@ -111,7 +111,7 @@ function PhoneCard({ item, myId, onOpen, onOpenBooking, act }: { item: InboxItem
         </div>
         {task.assigned_to === myId
           ? <button className="btn btn-primary" onClick={() => act(() => tasksApi.complete(task.id))}>Done</button>
-          : <button className="btn btn-primary" onClick={() => act(() => tasksApi.remind(task.id))}>Remind</button>}
+          : <RemindButton task={task} act={act} className="btn btn-primary" />}
       </div>
     )
   }

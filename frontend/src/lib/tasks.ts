@@ -35,3 +35,8 @@ export const dueMs = (t: Pick<Task, 'due_at'>) => (t.due_at ? new Date(t.due_at)
 export const byDue = (a: Pick<Task, 'due_at'>, b: Pick<Task, 'due_at'>) => dueMs(a) - dueMs(b)
 // "16:30" (24-hour, as in the designs), or "Any time"
 export const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : 'Any time')
+
+// Matches REMIND_GAP_MINUTES on the server: one reminder per task every 5 minutes.
+export const REMIND_GAP_MS = 5 * 60_000
+export const justReminded = (t: { last_reminded_at: string | null }) =>
+  !!t.last_reminded_at && Date.now() - new Date(t.last_reminded_at).getTime() < REMIND_GAP_MS

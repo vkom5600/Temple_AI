@@ -9,6 +9,7 @@ import { Avatar, ErrorNote, Icon, Modal, Spinner } from '../ui'
 import TaskForm from './TaskForm'
 import ConvertIssueForm from './ConvertIssueForm'
 import type { Issue, Task, TaskComment, TaskInput } from '../../types'
+import RemindButton from './RemindButton'
 
 // T4 Task details and T5 Review a finished task (designs: screens/19_T4, 20_T5):
 // a side panel with the brief, the submission, the history, and the admin actions.
@@ -156,7 +157,7 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
         {(task.status === 'done' || task.status === 'cancelled') && (
           <button className="btn btn-outline" disabled={busy} onClick={() => run(() => tasksApi.reopen(task.id))}>Reopen</button>
         )}
-        {open && <button className="btn btn-outline" disabled={busy} onClick={() => run(() => tasksApi.remind(task.id))}>Send reminder</button>}
+        {open && <RemindButton task={task} act={(a) => run(a)} />}
         {task.status !== 'cancelled' && <button className="btn btn-primary" onClick={() => setEditing(true)}>Edit task</button>}
       </>
     )

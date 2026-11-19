@@ -35,6 +35,7 @@ export const TASK_SELECT = `
            completer.full_name AS completed_by_name,
            verifier.full_name  AS verified_by_name,
            creator.full_name   AS created_by_name,
+           reminder.full_name  AS last_reminded_by_name,
            (t.status = 'todo' AND t.due_at < NOW()) AS is_overdue,
            last_comment.comment      AS last_comment,
            last_comment.comment_type AS last_comment_type,
@@ -44,6 +45,7 @@ export const TASK_SELECT = `
     LEFT JOIN users completer ON completer.id = t.completed_by
     LEFT JOIN users verifier  ON verifier.id  = t.verified_by
     LEFT JOIN users creator   ON creator.id   = t.created_by
+    LEFT JOIN users reminder  ON reminder.id  = t.last_reminded_by
     LEFT JOIN LATERAL (
         SELECT comment, comment_type FROM task_comments c
         WHERE c.task_id = t.id

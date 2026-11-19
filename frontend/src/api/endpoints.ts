@@ -20,6 +20,7 @@ export const usersApi = {
   setActive: (id: number, active: boolean) =>
     api<{ user: User }>(`/users/${id}/${active ? 'activate' : 'deactivate'}`, { method: 'PATCH' }),
   approve: (id: number) => api<{ user: User; message: string }>(`/users/${id}/approve`, { method: 'PATCH' }),
+  remove: (id: number) => api<{ message: string; open_tasks: number }>(`/users/${id}`, { method: 'DELETE' }),
   reject: (id: number, reason: string) =>
     api<{ user: User; message: string }>(`/users/${id}/reject`, { method: 'PATCH', body: { reason } }),
 }

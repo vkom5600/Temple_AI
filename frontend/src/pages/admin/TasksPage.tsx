@@ -6,12 +6,13 @@ import { fmtTime, fmtWhen } from '../../lib/format'
 import { assigneeLabel, byDue, dueMs, isFinished, repeatLabel } from '../../lib/tasks'
 import { useAdminContext } from '../../layouts/AdminLayout'
 import { useToast } from '../../components/Toast'
-import { Empty, ErrorNote, Icon, Spinner } from '../../components/ui'
+import { Empty, ErrorNote, Icon, Spinner, rowClick } from '../../components/ui'
 import { lateBy } from '../../components/InboxRow'
 import StatusBadge from '../../components/tasks/StatusBadge'
 import TaskForm from '../../components/tasks/TaskForm'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import type { Task } from '../../types'
+import RemindButton from '../../components/tasks/RemindButton'
 
 // T1 Tasks: Today, and T2 Upcoming / All (designs: screens/16_T1, 17_T2).
 // Assign work, track it, sign it off. Safety tasks need a second person.
@@ -204,7 +205,7 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
   const name = t.assigned_to_name
   const when = !t.due_at ? 'any time' : showDay ? fmtWhen(t.due_at) : `due ${fmtTime(t.due_at)}`
   return (
-    <div className={`t-row ${late ? 'urgent' : ''} ${t.status === 'awaiting_signoff' ? 'review' : ''}`}>
+    <div className={`t-row row-open ${late ? 'urgent' : ''} ${t.status === 'awaiting_signoff' ? 'review' : ''}`} {...rowClick(() => onOpen(t.id))}>
       <span className="av">{name ? name[0].toUpperCase() : <Icon name="users" size={18} />}</span>
       <div className="grow">
         <div className="t-title"><button onClick={() => onOpen(t.id)}>{t.title}</button></div>
@@ -228,7 +229,7 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
         {repeatLabel(t) && <span className="tag tag-ind">{repeatLabel(t)}</span>}
         {t.priority === 'high' && !t.requires_verification && <span className="tag tag-saf">High</span>}
         {late ? (
-          <button className="btn btn-outline btn-sm" onClick={() => act(() => tasksApi.remind(t.id))}>Remind</button>
+          <RemindButton task={t} act={act} className="btn btn-outline btn-sm" />
         ) : t.status === 'awaiting_signoff' ? (
           <button className="btn btn-outline btn-sm" onClick={() => onOpen(t.id)}>Review</button>
         ) : (
@@ -274,7 +275,7 @@ function AllTasks({ list, onOpen }: { list: Task[]; onOpen: (id: number) => void
             <thead><tr><th>Task</th><th>Assigned to</th><th>Due</th><th>Status</th><th>For</th><th className="right">Action</th></tr></thead>
             <tbody>
               {shown.map((t) => (
-                <tr key={t.id} className={t.is_overdue ? 'row-overdue' : ''}>
+                <tr key={t.id} className={`row-open ${t.is_overdue ? 'row-overdue' : ''}`} {...rowClick(() => onOpen(t.id))}>
                   <td>
                     <button className={`cell-title ${t.status === 'done' ? 'struck' : ''}`} onClick={() => onOpen(t.id)}>{t.title}</button>
                     <div className="badges">
@@ -286,7 +287,7 @@ function AllTasks({ list, onOpen }: { list: Task[]; onOpen: (id: number) => void
                   <td className={`nowrap ${t.is_overdue ? 'red-text' : ''}`}>{t.due_at ? fmtWhen(t.due_at) : 'No deadline'}</td>
                   <td><StatusBadge task={t} /></td>
                   <td>{t.booking_id ? <span className="tag tag-ind">Booking</span> : <span className="muted">—</span>}</td>
-                  <td className="right"><button className="link-btn" onClick={() => onOpen(t.id)}>Edit</button></td>
+                  <td className="right"><button className="link-btn" onClick={() => onOpen(t.id)}>Open</button></td>
                 </tr>
               ))}
             </tbody>

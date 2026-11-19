@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
-import { timeAgo } from '../../lib/format'
 import { useInbox, type InboxFilter } from '../../lib/inbox'
 import { useAdminContext } from '../../layouts/AdminLayout'
 import { useToast } from '../../components/Toast'
@@ -12,6 +11,7 @@ import TaskDetails from '../../components/tasks/TaskDetails'
 import BookingReview from '../../components/bookings/BookingReview'
 import { rulesApi } from '../../api/endpoints'
 import type { Issue } from '../../types'
+import HandledIssue from '../../components/HandledIssue'
 
 // AC1 Action Center (design: screens/10_AC1_action-center.png): everything waiting,
 // one main action per row. Booking requests join "Approvals" in Phase 3.
@@ -97,19 +97,7 @@ export default function ActionCenterPage() {
           </button>
           {showDone && (
             <section className="list-card inbox" style={{ marginTop: 10 }}>
-              {inbox.handledToday.map((i) => (
-                <div key={i.id} className="attn-row">
-                  <span className="tile-ic ic-grn"><Icon name="check" size={20} /></span>
-                  <div className="grow">
-                    <div className="attn-name">{i.description}</div>
-                    <div className="attn-meta">
-                      {i.status === 'converted'
-                        ? <span>Made into a task: "{i.created_task_title}" for {i.created_task_assignee_name ?? i.created_task_group}</span>
-                        : <span>Marked fixed by {i.resolved_by_name}{i.resolved_at && ` · ${timeAgo(i.resolved_at)}`}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {inbox.handledToday.map((i) => <HandledIssue key={i.id} issue={i} onOpenTask={setViewing} />)}
             </section>
           )}
         </div>

@@ -1016,9 +1016,9 @@ button.sched-what:hover { text-decoration: underline; }
 .week-dots i { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 6px; background: #e9e6e0; color: #fff; font-style: normal; }
 .week-dots .on i { background: #10875a; }
 .week-dots .off i { background: #f3d6d2; color: var(--red); }
-.week-dots .today i { box-shadow: 0 0 0 4px #cfe9dc; }
+.week-dots .is-today i { box-shadow: 0 0 0 4px #cfe9dc; }
 .week-dots span { font-size: 13.5px; color: var(--muted); }
-.week-dots .today span { color: var(--ind-d); font-weight: 700; }
+.week-dots .is-today span { color: var(--ind-d); font-weight: 700; }
 .week-sum { display: flex; justify-content: space-between; gap: 10px; padding-top: 12px; color: var(--ink-2); flex-wrap: wrap; }
 .mini-tasks { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .mini-task { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-top: 1px solid var(--line); width: 100%; background: #fff; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; }
@@ -1031,7 +1031,7 @@ button.sched-what:hover { text-decoration: underline; }
 .mini-task b { display: block; color: var(--ind-d); font-weight: 500; }
 .mini-task small { color: var(--saf-d); font-size: 13.5px; }
 .kebab { position: relative; }
-.kebab-menu { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border-radius: 12px; box-shadow: 0 12px 32px rgba(21, 20, 61, .18); padding: 6px; min-width: 190px; z-index: 5; }
+.kebab-menu { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border-radius: 12px; box-shadow: 0 12px 32px rgba(21, 20, 61, .18); padding: 6px; min-width: 230px; z-index: 5; }
 .kebab-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; background: none; border-radius: 8px; color: var(--ind-d); font-weight: 500; text-align: left; }
 .kebab-menu button:hover { background: var(--well); }
 .kebab-menu button.danger { color: var(--red); }
@@ -1361,3 +1361,29 @@ button.sched-what:hover { text-decoration: underline; }
 .me-av { position: relative; display: inline-flex; flex: none; }
 .me-dot { position: absolute; top: -1px; right: -1px; width: 11px; height: 11px; border-radius: 50%; background: var(--saf); box-shadow: 0 0 0 2px var(--ind); }
 .me-menu .count { background: var(--saf); color: var(--ind-d); }
+
+/* P2 read-only details (committee view) */
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin: 0; background: #f6f3ed; border-radius: 12px; padding: 18px 20px; }
+.facts dd { margin: 4px 0 0; font-weight: 600; color: var(--ind-d); overflow-wrap: anywhere; }
+.facts dd a { color: inherit; }
+@media (max-width: 760px) { .facts { grid-template-columns: 1fr; } }
+.mini-task > svg { margin-left: auto; color: var(--muted); flex: none; }
+.kebab-note { margin: 0; padding: 10px 12px; color: var(--muted); font-size: 13.5px; max-width: 220px; }
+.remove-warn { display: flex; gap: 12px; align-items: flex-start; background: var(--red-soft); color: var(--red); border-radius: 12px; padding: 14px 16px; }
+.remove-warn b { color: var(--red); }
+.remove-warn p { margin: 4px 0 0; color: var(--ind-d); font-size: 14px; line-height: 1.45; }
+.remove-warn svg { flex: none; margin-top: 2px; }
+
+/* "Done today" rows open to show what happened */
+.handled-row { width: 100%; background: none; border: 0; text-align: left; cursor: pointer; }
+.handled-row:hover { background: #fbfaf7; }
+.handled-more { display: grid; gap: 6px; margin-top: 10px; font-size: 13.5px; color: var(--muted); }
+.handled-more b { color: var(--ind-d); font-weight: 600; }
+.m-task.done .m-task-head { cursor: pointer; }
+.row-open { cursor: pointer; }
+.t-row.row-open:hover, .attn-row.row-open:hover { background: #fbfaf7; }
+.kebab-menu button { white-space: nowrap; }
+.mini-task small.done { color: var(--green-mid); }
+.btn.reminded:disabled { opacity: 1; color: var(--green-mid); border-color: #cfe9dc; background: #f1f9f4; cursor: default; }
+.reminded-note { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; align-self: flex-start; background: #fff4e5; color: var(--saf-d); border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600; }
+tr.row-open:hover td { background: #fbfaf7; }

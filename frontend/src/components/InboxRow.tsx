@@ -5,8 +5,9 @@ import { fmtTime, timeAgo } from '../lib/format'
 import { bookingSlot } from '../lib/bookings'
 import { jobName, quickTaskFor, type InboxItem } from '../lib/inbox'
 import { assigneeLabel } from '../lib/tasks'
-import { Icon } from './ui'
+import { Icon, rowClick } from './ui'
 import type { Issue, Role } from '../types'
+import RemindButton from './tasks/RemindButton'
 
 type Action = () => Promise<{ message: string }>
 
@@ -37,7 +38,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
     const mine = task.assigned_to === myId
     const days = Math.floor((Date.now() - new Date(task.due_at!).getTime()) / 86_400_000) // overdue tasks always have a time
     return (
-      <div className="attn-row">
+      <div className="attn-row row-open" {...rowClick(() => onOpenTask(task.id))}>
         <span className="tile-ic ic-red"><Icon name={task.requires_verification ? 'shield' : 'alarm'} size={20} /></span>
         <div className="grow">
           <div className="attn-name"><button onClick={() => onOpenTask(task.id)}>{task.title}</button></div>
@@ -59,7 +60,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
           {mine ? (
             <button className="btn btn-outline" onClick={() => act(() => tasksApi.complete(task.id))}><Icon name="check" size={16} /> Mark done</button>
           ) : (
-            <button className="btn btn-outline" onClick={() => act(() => tasksApi.remind(task.id))}><Icon name="bell" size={16} /> Remind</button>
+            <RemindButton task={task} act={act} />
           )}
           <button className="btn btn-outline" onClick={() => onOpenTask(task.id)}>Reassign</button>
         </div>
@@ -70,8 +71,9 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
   if (item.kind === 'problem' && issue) {
     const helper = item.helper
     const first = helper?.full_name.split(' ')[0]
+    const taskId = issue.task_id
     return (
-      <div className="attn-row">
+      <div className={`attn-row ${taskId ? 'row-open' : ''}`} {...(taskId ? rowClick(() => onOpenTask(taskId)) : {})}>
         <span className="tile-ic ic-saf"><Icon name={/lock|door/i.test(issue.description) ? 'lock' : 'alert'} size={20} /></span>
         <div className="grow">
           <div className="attn-name">{issue.description}</div>
@@ -96,7 +98,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
   if (item.kind === 'signoff' && task) {
     const own = task.completed_by === myId
     return (
-      <div className="attn-row">
+      <div className="attn-row row-open" {...rowClick(() => onOpenTask(task.id))}>
         <span className="tile-ic ic-grn"><Icon name="shield" size={20} /></span>
         <div className="grow">
           <div className="attn-name"><button onClick={() => onOpenTask(task.id)}>{task.title}</button></div>
@@ -118,7 +120,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
     const check = item.booking.check
     const ok = check?.recommendation === 'approve'
     return (
-      <div className="attn-row">
+      <div className="attn-row row-open" {...rowClick(() => onOpenBooking(b.id))}>
         <span className="tile-ic ic-ind"><Icon name="calendar" size={20} /></span>
         <div className="grow">
           <div className="attn-name"><button onClick={() => onOpenBooking(b.id)}>{b.title}, {b.resource_name}</button></div>

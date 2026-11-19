@@ -33,11 +33,11 @@ const notFound = (res) =>
 export const getUsers = async (req, res) => {
     const { status } = req.query;
     const values = [];
-    let where = "";
+    let where = "WHERE u.removed_at IS NULL";
 
     if (["pending", "approved", "rejected"].includes(status)) {
         values.push(status);
-        where = "WHERE u.approval_status = $1";
+        where += " AND u.approval_status = $1";
     }
 
     const result = await pool.query(
@@ -351,3 +351,41 @@ const setActive = (isActive) => async (req, res) => {
 
 export const deactivateUser = setActive(false);
 export const activateUser = setActive(true);
+
+// DELETE /api/users/:id  (chairman). P2 "Remove person": switches off sign-in and
+// hides them from People. Their history stays, so the records still make sense.
+export const removeUser = async (req, res) => {
+    const id = parseId(req.params.id);
+
+    if (id === req.user.id) {
+        return res.status(400).json({ success: false, message: "You cannot remove yourself" });
+    }
+
+    const result = await pool.query(
+        `UPDATE users SET is_active = false, removed_at = now()
+         WHERE id = $1 AND role <> 'chairman' AND removed_at IS NULL
+         RETURNING full_name`,
+        [id]
+    );
+    if (result.rowCount === 0) return notFound(res);
+
+    const open = await pool.query(
+        "SELECT count(*)::int AS n FROM tasks WHERE assigned_to = $1 AND status IN ('todo', 'flagged')",
+        [id]
+    );
+
+    await logAudit({
+        actorId: req.user.id,
+        action: "user.removed",
+        entityType: "user",
+        entityId: id,
+        details: { name: result.rows[0].full_name, open_tasks: open.rows[0].n }
+    });
+
+    const n = open.rows[0].n;
+    res.json({
+        success: true,
+        open_tasks: n,
+        message: `${result.rows[0].full_name} removed${n ? `. ${n} open task${n === 1 ? "" : "s"} still assigned to them need someone new` : ""}`
+    });
+};

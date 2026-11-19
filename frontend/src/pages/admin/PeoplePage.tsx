@@ -9,6 +9,7 @@ import { useToast } from '../../components/Toast'
 import { Avatar, Badge, ErrorNote, Icon, Modal, Spinner } from '../../components/ui'
 import type { AttendanceDay, Designation, PresenceRow, Role, Task, User, UserInput } from '../../types'
 import { SignupsCard, SignupsDrawer } from './Registrations'
+import TaskDetails from '../../components/tasks/TaskDetails'
 
 const BLANK: UserInput = {
   full_name: '',
@@ -131,21 +132,20 @@ export default function PeoplePage() {
                 <Fragment key={g.label}>
                   <tr className="group"><td colSpan={6}>{g.label} ({g.list.length})</td></tr>
                   {g.list.map((u) => {
-                    const editable = canEdit && u.role !== 'chairman'
                     return (
                       <tr
                         key={u.id}
-                        className={editable ? 'prow' : ''}
-                        onClick={editable ? () => setEditing(u) : undefined}
-                        tabIndex={editable ? 0 : undefined}
-                        onKeyDown={editable ? (e) => e.key === 'Enter' && setEditing(u) : undefined}
+                        className="prow"
+                        onClick={() => setEditing(u)}
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditing(u)}
                       >
                         <td><span className="pname"><Avatar name={u.full_name} size={38} /> {u.full_name}{u.id === me?.id && <span className="muted small">(you)</span>}</span></td>
                         <td>{u.role === 'committee' ? 'Committee member' : jobLabel(u)}</td>
                         <td className="mono">{u.phone ?? '—'}</td>
                         <td className="email">{u.email}</td>
                         <td><Presence row={presence.get(u.id)} active={u.is_active} /></td>
-                        <td className="chev">{editable && <Icon name="chevron-right" size={18} />}</td>
+                        <td className="chev"><Icon name="chevron-right" size={18} /></td>
                       </tr>
                     )
                   })}
@@ -160,6 +160,7 @@ export default function PeoplePage() {
         <PersonForm
           presence={editing === 'new' ? undefined : presence.get(editing.id)}
           person={editing === 'new' ? null : editing}
+          canEdit={canEdit && (editing === 'new' || editing.role !== 'chairman')}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
@@ -182,12 +183,16 @@ function Presence({ row, active }: { row?: PresenceRow; active: boolean }) {
 }
 
 // P2 Person details and edit / P3 Add person (designs: screens/28_P2).
-function PersonForm({ person, presence, onClose, onSaved }: { person: User | null; presence?: PresenceRow; onClose: () => void; onSaved: () => void }) {
+// Opens on the details; the ⋮ menu has Edit and Remove person (chairman only).
+function PersonForm({ person, presence, canEdit, onClose, onSaved }: { person: User | null; presence?: PresenceRow; canEdit: boolean; onClose: () => void; onSaved: () => void }) {
   const toast = useToast()
   const [form, setForm] = useState<UserInput>(person ? toInput(person) : BLANK)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [menu, setMenu] = useState(false)
+  const [editMode, setEditMode] = useState(!person)
+  const [removing, setRemoving] = useState(false)
+  const [viewingTask, setViewingTask] = useState<number | null>(null)
   const [tasks, setTasks] = useState<Task[] | null>(null)
   const [week, setWeek] = useState<{ date: string; state: string }[] | null>(null)
   const set = <K extends keyof UserInput>(key: K, value: UserInput[K]) => setForm((f) => ({ ...f, [key]: value }))
@@ -198,22 +203,27 @@ function PersonForm({ person, presence, onClose, onSaved }: { person: User | nul
   const passwordOk = isNew ? (form.password ?? '').length >= 8 : !form.password || form.password.length >= 8
   const canSave = form.full_name.trim() && form.email.trim() && !needsJob && passwordOk && !busy
 
-  useEffect(() => {
+  const loadTasks = useCallback(() => {
     if (!person) return
     tasksApi.list({ view: 'today' }).then((r) => setTasks(r.tasks.filter((t) => t.assigned_to === person.id))).catch(() => setTasks([]))
+  }, [person])
+
+  useEffect(() => {
+    if (!person) return
+    loadTasks()
     if (!checksIn) return
     // Last 7 days of attendance, one day at a time (small team, so 7 quick requests).
     const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return toDateInput(d) })
     Promise.all(days.map((d) => attendanceApi.day(d).then((r) => r.people.find((p) => p.user_id === person.id)?.state ?? 'none').catch(() => 'none')))
       .then((states) => setWeek(days.map((date, i) => ({ date, state: states[i] }))))
-  }, [person, checksIn])
+  }, [person, checksIn, loadTasks])
 
   const run = async (action: () => Promise<unknown>, message: string) => {
     setError('')
     setBusy(true)
     try {
       await action()
-      toast(message)
+      if (message) toast(message)
       onSaved()
     } catch (err) {
       setError((err as Error).message)
@@ -226,6 +236,9 @@ function PersonForm({ person, presence, onClose, onSaved }: { person: User | nul
       () => (person ? usersApi.update(person.id, form) : usersApi.create(form)),
       person ? 'Details saved' : `${form.full_name.trim()} added`,
     )
+
+  const remove = () => person && run(() => usersApi.remove(person.id).then((r) => { toast(r.message) }), '')
+  const cancelEdit = () => { if (!person) return onClose(); setForm(toInput(person)); setError(''); setEditMode(false) }
 
   const toggleActive = () =>
     person &&
@@ -254,26 +267,53 @@ function PersonForm({ person, presence, onClose, onSaved }: { person: User | nul
             <p>{person.role === 'committee' ? 'Committee member' : jobLabel(person)} · {ROLE_LABELS[person.role]}</p>
           </div>
           <div className="kebab">
-            <button className="icon-btn" aria-label="More" aria-expanded={menu} onClick={() => setMenu((m) => !m)}><Icon name="list" /></button>
+            <button className="icon-btn" aria-label="More" aria-expanded={menu} onClick={() => setMenu((m) => !m)}><Icon name="more" size={20} /></button>
             {menu && (
-              <div className="kebab-menu">
-                <button className={person.is_active ? 'danger' : ''} onClick={() => { setMenu(false); toggleActive() }}>
-                  <Icon name={person.is_active ? 'x' : 'check'} /> {person.is_active ? 'Switch off sign-in' : 'Switch sign-in back on'}
-                </button>
+              <div className="kebab-menu" role="menu">
+                {canEdit ? (
+                  <>
+                    <button role="menuitem" onClick={() => { setMenu(false); setRemoving(false); setEditMode(true) }}><Icon name="edit" /> Edit</button>
+                    <button role="menuitem" onClick={() => { setMenu(false); toggleActive() }}>
+                      <Icon name={person.is_active ? 'lock' : 'key'} /> {person.is_active ? 'Switch off sign-in' : 'Switch sign-in back on'}
+                    </button>
+                    <button role="menuitem" className="danger" onClick={() => { setMenu(false); setEditMode(false); setRemoving(true) }}><Icon name="trash" /> Remove person</button>
+                  </>
+                ) : (
+                  <p className="kebab-note">Only the chairman can edit or remove people.</p>
+                )}
               </div>
             )}
           </div>
         </div>
       ) : undefined}
       subtitle={isNew ? 'They sign in with this email and the starting password you give them.' : undefined}
-      footer={
+      footer={removing && person ? (
         <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-outline" onClick={() => setRemoving(false)}>Keep {person.full_name.split(' ')[0]}</button>
+          <button className="btn btn-danger btn-lg" disabled={busy} onClick={remove}><Icon name="trash" /> {busy ? 'Removing…' : `Remove ${person.full_name.split(' ')[0]}`}</button>
+        </>
+      ) : !editMode ? (
+        <>
+          <button className="btn btn-outline" onClick={onClose}>Close</button>
+          {canEdit && <button className="btn btn-primary btn-lg" onClick={() => setEditMode(true)}><Icon name="edit" /> Edit details</button>}
+        </>
+      ) : (
+        <>
+          <button className="btn btn-outline" onClick={cancelEdit}>Cancel</button>
           <button className="btn btn-primary btn-lg" disabled={!canSave} onClick={save}><Icon name="check" /> {busy ? 'Saving…' : person ? 'Save changes' : 'Add person'}</button>
         </>
-      }
+      )}
     >
-      <div className="filled stack" style={{ gap: 16 }}>
+      {removing && person && (
+        <div className="remove-warn" role="alert">
+          <Icon name="alert" size={20} />
+          <div>
+            <b>Remove {person.full_name} from the temple team?</b>
+            <p>They won't be able to sign in and won't show in People any more. Their past tasks, attendance and the activity log keep their name. Any open tasks still assigned to them will need someone new.</p>
+          </div>
+        </div>
+      )}
+      {!editMode && person ? <PersonFacts person={person} /> : <div className="filled stack" style={{ gap: 16 }}>
         <div className="grid-2f">
           <label className="field">
             <span className="ulabel">Full name</span>
@@ -327,14 +367,14 @@ function PersonForm({ person, presence, onClose, onSaved }: { person: User | nul
             <input type="text" autoComplete="new-password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder={isNew ? '8+ characters' : 'Leave blank to keep'} />
           </label>
         </div>
-      </div>
+      </div>}
 
       {person && (
         <div className={`status-bar ${person.is_active ? '' : 'off'}`}>
           <span className="dot" />
           <b>{person.is_active ? 'Active' : 'Switched off'}</b>
           <span className="muted">· {person.role === 'staff' || person.role === 'volunteer' ? 'uses the staff phone app' : 'uses the admin app'}</span>
-          <button onClick={toggleActive} disabled={busy}>{person.is_active ? 'Switch off sign-in' : 'Switch back on'}</button>
+          {canEdit && <button onClick={toggleActive} disabled={busy}>{person.is_active ? 'Switch off sign-in' : 'Switch back on'}</button>}
         </div>
       )}
 
@@ -344,7 +384,7 @@ function PersonForm({ person, presence, onClose, onSaved }: { person: User | nul
           <div className="week-box">
             <div className="week-dots">
               {(week ?? Array.from({ length: 7 }, (_, i) => ({ date: String(i), state: 'none' }))).map((d, i) => (
-                <div key={d.date} className={`${d.state === 'here' || d.state === 'left' ? 'on' : d.state === 'absent' ? 'off' : ''} ${i === 6 ? 'today' : ''}`}>
+                <div key={d.date} className={`${d.state === 'here' || d.state === 'left' ? 'on' : d.state === 'absent' ? 'off' : ''} ${i === 6 ? 'is-today' : ''}`}>
                   <i>{d.state === 'here' || d.state === 'left' ? <Icon name="check" size={16} /> : d.state === 'absent' ? <Icon name="x" size={14} /> : ''}</i>
                   <span>{week ? new Date(`${d.date}T12:00:00`).toLocaleDateString([], { weekday: 'short' }) : ''}</span>
                 </div>
@@ -361,15 +401,16 @@ function PersonForm({ person, presence, onClose, onSaved }: { person: User | nul
           {tasks && tasks.length > 0 ? (
             <div className="mini-tasks">
               {tasks.map((t) => (
-                <div key={t.id} className="mini-task">
+                <button key={t.id} type="button" className="mini-task" onClick={() => setViewingTask(t.id)}>
                   <span className={`dot ${t.status === 'done' ? 'grn' : t.status === 'awaiting_signoff' || t.status === 'flagged' ? 'saf' : t.is_overdue ? 'red' : ''}`} />
                   <span className="grow">
                     <b>{t.title}</b>
-                    <small>
+                    <small className={t.status === 'done' ? 'done' : undefined}>
                       {t.status === 'awaiting_signoff' ? `Awaiting review · done ${fmtTime(t.completed_at!)}` : t.status === 'done' ? 'Done' : t.status === 'flagged' ? `⚑ Couldn't do · ${t.last_comment ?? ''}` : `Due ${fmtTime(t.due_at)}${t.is_overdue ? ' · overdue' : ''}`}
                     </small>
                   </span>
-                </div>
+                  <Icon name="chevron-right" size={18} />
+                </button>
               ))}
             </div>
           ) : tasks ? <p className="muted small" style={{ margin: 0 }}>Nothing assigned to {person.full_name.split(' ')[0]} today.</p> : null}
@@ -377,6 +418,24 @@ function PersonForm({ person, presence, onClose, onSaved }: { person: User | nul
       )}
 
       <ErrorNote>{error}</ErrorNote>
+      {viewingTask && <TaskDetails taskId={viewingTask} onClose={() => setViewingTask(null)} onChanged={loadTasks} />}
     </Modal>
+  )
+}
+
+// P2 for committee members: the same details, read-only (only the chairman edits people).
+function PersonFacts({ person }: { person: User }) {
+  const facts: [string, React.ReactNode][] = [
+    ['Phone number', person.phone ? <a href={`tel:${person.phone}`}>{person.phone}</a> : '—'],
+    ['Email', <a href={`mailto:${person.email}`}>{person.email}</a>],
+    ['Emergency contact', person.emergency_contact || '—'],
+    ['Joined', person.joining_date ? new Date(`${person.joining_date.slice(0, 10)}T12:00:00`).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : '—'],
+  ]
+  return (
+    <dl className="facts">
+      {facts.map(([label, value]) => (
+        <div key={label}><dt className="ulabel">{label}</dt><dd>{value}</dd></div>
+      ))}
+    </dl>
   )
 }

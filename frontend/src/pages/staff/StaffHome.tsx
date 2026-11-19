@@ -6,7 +6,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { fmtDay, fmtInline, fmtTime, greeting, isToday, longDate, timeAgo } from '../../lib/format'
 import { byDue, isFinished } from '../../lib/tasks'
 import { useToast } from '../../components/Toast'
-import { ErrorNote, Icon, Spinner } from '../../components/ui'
+import { ErrorNote, Icon, Spinner, rowClick } from '../../components/ui'
 import { Mandala } from '../../components/Ornaments'
 import { HistoryDialog, LeavingSheet } from '../../components/attendance/CheckInCard'
 import ProblemSheet from '../../components/tasks/ProblemSheet'
@@ -40,17 +40,24 @@ export default function StaffHome() {
   // Confirmed bookings and temple events today ("Today at the temple", M2)
   const [schedule, setSchedule] = useState<ScheduleItem[]>([])
   useEffect(() => { bookingsApi.schedule().then((r) => setSchedule(r.bookings)).catch(() => {}) }, [])
-  useEffect(() => {
+  const loadMessage = useCallback(() => {
     notificationsApi.list()
       .then((r) => setMessage(r.notifications.find((n) => !n.is_read && n.notification_type.startsWith('broadcast')) ?? null))
       .catch(() => {})
   }, [])
+  useEffect(loadMessage, [loadMessage])
   const gotIt = () => { if (message) notificationsApi.markRead(message.id).catch(() => {}); setMessage(null) }
 
   const loadMe = useCallback(() => {
     attendanceApi.me().then(setMe).catch((e: Error) => setError(e.message))
   }, [])
   useEffect(() => { loadTasks(); loadMe() }, [loadTasks, loadMe])
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') { loadTasks(); loadMessage() } }
+    const id = setInterval(refresh, 60_000)
+    document.addEventListener('visibilitychange', refresh)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', refresh) }
+  }, [loadTasks, loadMessage])
 
   // Run an action, show its message, refresh. Attendance actions return the new state.
   const run = async (action: () => Promise<Result & Partial<MyAttendance>>, after?: () => void) => {
@@ -157,7 +164,7 @@ export default function StaffHome() {
             Done today ({done}) <Icon name="chevron-down" size={16} />
           </button>
           {showDone && today.filter(isFinished).map((t) => (
-            <TaskCard key={t.id} task={t} open={false} locked={false} busy={busy} run={run} onOpen={() => {}} onHelp={() => {}} />
+            <TaskCard key={t.id} task={t} open={openTask === t.id} locked={false} busy={busy} run={run} onOpen={() => setOpenTask((id) => (id === t.id ? null : t.id))} onHelp={() => {}} />
           ))}
         </>
       )}
@@ -235,11 +242,12 @@ function TaskCard({ task: t, open, locked, busy, run, onOpen, onHelp }: {
   const note = t.status === 'todo' && (t.last_comment_type === 'sent_back' || t.last_comment_type === 'system') ? t.last_comment : null
   const isLocked = locked && t.status === 'todo'
   const expanded = open && t.status === 'todo' && !isLocked
+  const showDone = open && finished
 
   return (
-    <div className={`m-task ${tone} ${isLocked ? 'locked' : ''} ${expanded ? 'open' : ''}`}>
+    <div className={`m-task ${tone} ${isLocked ? 'locked' : ''} ${expanded ? 'open' : ''}`} {...(!open && ((t.status === 'todo' && !isLocked) || finished) ? rowClick(onOpen) : {})}>
       <div className="m-task-row">
-        <button className="txt m-task-head" onClick={t.status === 'todo' && !isLocked ? onOpen : undefined} aria-expanded={expanded}>
+        <button className="txt m-task-head" onClick={(t.status === 'todo' && !isLocked) || finished ? onOpen : undefined} aria-expanded={expanded || showDone}>
           <span className="t">{t.title}</span>
           <span className="m">
             {late ? <b className="red">Late · was due {fmtInline(t.due_at)}</b> : t.due_at ? `By ${fmtTime(t.due_at)}` : 'Any time'}
@@ -251,6 +259,9 @@ function TaskCard({ task: t, open, locked, busy, run, onOpen, onHelp }: {
           {t.verified_by_name && <span className="m" style={{ color: 'var(--green)' }}>Signed off by {t.verified_by_name}</span>}
           {t.status === 'done' && t.completed_by !== user?.id && t.completed_by_name && <span className="m">Done by {t.completed_by_name}</span>}
           {t.status === 'flagged' && <span className="m red">Asked for help: {t.last_comment}</span>}
+          {t.status === 'todo' && t.last_reminded_at && isToday(t.last_reminded_at) && (
+            <span className="reminded-note"><Icon name="bell" size={14} /> {t.last_reminded_by_name ? `${t.last_reminded_by_name.split(' ')[0]} sent a reminder` : 'Reminder'} · {timeAgo(t.last_reminded_at)}</span>
+          )}
           {note && <span className="sentback">{t.last_comment_type === 'sent_back' ? 'Sent back: ' : ''}{note}</span>}
         </button>
         {t.status === 'todo' && !isLocked && !expanded && <button className="btn btn-outline" onClick={onOpen}>Start</button>}
@@ -272,6 +283,21 @@ function TaskCard({ task: t, open, locked, busy, run, onOpen, onHelp }: {
           {t.requires_verification && <div className="m saf-text"><Icon name="shield" size={14} /> Safety task: someone will check it after you</div>}
           <button className="btn btn-done btn-big" disabled={busy} onClick={() => run(() => tasksApi.complete(t.id))}><Icon name="check" /> Done</button>
           <button className="btn btn-outline btn-big" onClick={onHelp}><Icon name="alert" /> I need help</button>
+        </div>
+      )}
+
+      {showDone && (
+        <div className="m-task-body">
+          {t.completed_at && <div className="kv"><Icon name="check" size={16} /><span>Done at {fmtTime(t.completed_at)}{t.completed_by_name && ` by ${t.completed_by_name.split(' ')[0]}`}</span></div>}
+          {t.verified_by_name && <div className="kv"><Icon name="shield" size={16} /><span>Checked by {t.verified_by_name.split(' ')[0]}{t.verified_at && ` at ${fmtTime(t.verified_at)}`}</span></div>}
+          {t.area && <div className="kv"><Icon name="pin" size={16} /><span>{t.area}</span></div>}
+          {t.created_by_name && <div className="kv"><Icon name="user" size={16} /><span>From {t.created_by_name.split(' ')[0]}</span></div>}
+          {t.description && (
+            <div className="what-to-do">
+              <span className="ulabel">What to do</span>
+              <p>{t.description}</p>
+            </div>
+          )}
         </div>
       )}
 

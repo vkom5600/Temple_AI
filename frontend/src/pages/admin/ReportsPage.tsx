@@ -161,7 +161,7 @@ function Summary() {
           <div className="row no-print">
             <button className="btn btn-outline btn-sm" onClick={load}><Icon name="repeat" size={14} /> Regenerate</button>
             <button className="btn btn-outline btn-sm" onClick={copy}><Icon name="mail" size={14} /> Copy as email</button>
-            <button className="btn btn-primary btn-sm" onClick={() => window.print()}><Icon name="arrow-right" size={14} /> Download PDF</button>
+            <button className="btn btn-primary btn-sm" onClick={() => window.print()}><Icon name="download" size={14} /> Download PDF</button>
           </div>
         </div>
 

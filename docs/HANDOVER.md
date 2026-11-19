@@ -215,6 +215,11 @@ Browser (React + TypeScript)  ──/api──►  Express API (Node.js, JavaScr
 | 26 | **Allocation view**: every hall and room by hour, in the Calendar | Committee: "one view – allocation" |
 | 27 | Spaces in a `resources` table the chairman manages; 6 to start, **10 in all to be added** | Committee: 10 resources (6+2+1+1) |
 | 28 | Approving a booking adds prep tasks (priest, cleaner, caretaker, security with a second check) | Design AC2 |
+| 29 | **Remove person** is a soft remove (`users.removed_at`): no sign-in, off the People list, history kept | Design P2 (⋮ menu: Edit, Remove person) |
+| 30 | P2 opens on the details for every admin; only the chairman sees Edit / Remove / Switch off sign-in | Design P2; chairman manages people |
+| 31 | **Remind** sends a phone notification (and email if set up), shows "Raghu sent a reminder" on the staff task card, and the button reads "Reminded" for 5 minutes | Task workflow |
+| 32 | Clicking anywhere on a task row opens the task; "Done today" rows open to show what happened | User feedback |
+| 33 | Admin notifications live in the account menu (dot on the avatar), not a bell squeezed into the sidebar | User feedback |
 
 ---
 
