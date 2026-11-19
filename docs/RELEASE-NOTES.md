@@ -35,6 +35,7 @@ volunteers on their phones.
 **Behind the scenes**
 - Every request checks sign-in, role and committee access; all changes go in the activity log.
 - Scheduled jobs: repeating tasks, closing check, hourly overdue reminders, nightly report.
+- Every date and time is shown and saved in UK time (GMT/BST), whatever the device's time zone.
 - 19 automated API tests (`npm test`) and a 100-screen layout check (`npm run check:layout`).
 - One-service hosting (`render.yaml`, see `docs/DEPLOY.md`).
 
@@ -44,7 +45,6 @@ volunteers on their phones.
   native speakers to check the translations.
 - **Google Calendar two-way sync:** code is ready; needs the temple's Google keys.
 - **SMS / WhatsApp for broadcasts:** in-app only for now (email when SMTP is set up).
-- (Done) Times are always UK time, whatever the device's time zone.
 - **Festival dates:** need confirming with the priest each year.
 
 ## Before tagging
