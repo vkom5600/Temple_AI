@@ -3,6 +3,7 @@ import type {
   PlanDraft,
   PlanEvent,
   PlanTask,
+  Question,
   Access,
   Festival,
   FestivalHome,
@@ -147,6 +148,15 @@ export const rulesApi = {
 export const aiApi = {
   ask: (question: string, history: { from: 'me' | 'ai'; text: string }[]) =>
     api<{ answer: string; source: string }>('/ai/ask', { method: 'POST', body: { question, history } }),
+}
+
+// M6 Ask a question
+export const questionsApi = {
+  ask: (question: string, task_id: number | null) => api<{ message: string }>('/questions', { method: 'POST', body: { question, task_id } }),
+  mine: () => api<{ questions: Question[] }>('/questions/mine'),
+  seen: (id: number) => api<{ success: boolean }>(`/questions/${id}/seen`, { method: 'PATCH' }),
+  list: (status: 'open' | 'answered' = 'open') => api<{ questions: Question[] }>(`/questions?status=${status}`),
+  answer: (id: number, answer: string) => api<{ message: string }>(`/questions/${id}/answer`, { method: 'POST', body: { answer } }),
 }
 
 // W1 public booking (no sign-in)

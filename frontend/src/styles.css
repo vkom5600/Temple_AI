@@ -1546,3 +1546,14 @@ tr.row-open:hover td { background: #fbfaf7; }
 .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .entry .tiles { grid-template-columns: 1fr 1fr; }
 .recommend .ai-note-text { margin: 6px 0 0 22px; color: var(--ind-d); font-weight: 400; line-height: 1.5; }
+
+/* M6 questions */
+.q-answer { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.q-answer textarea { width: 100%; }
+.m-task.s-ind { border-left-color: var(--ind-2); }
+.m-q { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-bottom: 1px solid var(--line-2); }
+.m-q:last-child { border-bottom: 0; }
+.m-q .q-text { color: var(--ind-d); font-weight: 600; }
+.m-q .q-reply { color: var(--ink-2); line-height: 1.45; }
+.m-q.new { background: #fff8ef; cursor: pointer; }
+.m-q .pill { font-style: normal; margin-left: 6px; }

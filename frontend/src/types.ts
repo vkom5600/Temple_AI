@@ -154,6 +154,7 @@ export interface TaskSummary {
   open_issues: number
   pending_registrations: number
   pending_bookings: number
+  open_questions?: number
 }
 
 export type TaskView = 'open' | 'overdue' | 'signoff' | 'flagged' | 'done' | 'all' | 'today' | 'mine'
@@ -427,4 +428,21 @@ export interface FestivalHome {
   next: Festival | null
   reminder: { festival: Festival; days: number; last_time: { id: number; title: string; tasks: number; volunteers: number } | null } | null
   events_today: number
+}
+
+// ---------- M6 Ask a question ----------
+export interface Question {
+  id: number
+  question: string
+  answer: string | null
+  created_at: string
+  answered_at: string | null
+  seen_at: string | null
+  task_id: number | null
+  task_title: string | null
+  asked_by: number
+  asked_by_name: string
+  asked_by_designation: Designation | null
+  asked_by_role: Role
+  answered_by_name: string | null
 }

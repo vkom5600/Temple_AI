@@ -31,7 +31,7 @@ const sameDay = ukSameDay
 export const isToday = (iso: string | null) => !!iso && sameDay(new Date(iso), new Date())
 
 // null = a task with no deadline
-export const fmtTime = (iso: string | null) => (iso ? ukTime(new Date(iso), { hour: 'numeric', minute: '2-digit' }) : 'Any time')
+export const fmtTime = (iso: string | null) => (iso ? ukTime(new Date(iso), { hour: 'numeric', minute: '2-digit', hour12: true }) : 'Any time')
 
 // "Today", "Tomorrow", "Yesterday", or "Sat 31 Oct"
 export function fmtDay(iso: string | null): string {

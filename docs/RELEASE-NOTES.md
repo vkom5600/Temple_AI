@@ -28,7 +28,7 @@ volunteers on their phones.
 **Staff and volunteers (phone)**
 - Check in and out, with the closing checklist; today's tasks (Start, Done, I need help);
   reminders on the task card; messages from the chairman; today at the temple;
-  request a booking and see my bookings; report a problem.
+  request a booking and see my bookings; report a problem; ask the committee a question and get the answer (M6).
 
 **Public:** join the temple team (only open groups, closes by itself), and book a hall or room at /book without signing in (W1).
 

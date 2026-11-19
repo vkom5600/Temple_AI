@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { attendanceApi, bookingsApi, notificationsApi, tasksApi, festivalsApi } from '../../api/endpoints'
+import { attendanceApi, bookingsApi, notificationsApi, tasksApi, festivalsApi, questionsApi } from '../../api/endpoints'
 import { Link } from 'react-router-dom'
 import { bookingTimes } from '../../lib/bookings'
 import { useAuth } from '../../auth/AuthContext'
@@ -12,7 +12,8 @@ import { HistoryDialog, LeavingSheet } from '../../components/attendance/CheckIn
 import ProblemSheet from '../../components/tasks/ProblemSheet'
 import HelpSheet from '../../components/tasks/HelpSheet'
 import VerifyList from '../../components/tasks/VerifyList'
-import type { AppNotification, ClosingChecks, MyAttendance, ScheduleItem, Task, Festival } from '../../types'
+import type { AppNotification, ClosingChecks, MyAttendance, ScheduleItem, Task, Festival, Question } from '../../types'
+import QuestionSheet from '../../components/QuestionSheet'
 
 // Staff phone app: M1 Arriving and M2 Your tasks today (designs: screens/33_M1, 34_M2).
 // One scrolling page. Tasks unlock once you tap "I'm here"; "I'm leaving" checks you out.
@@ -26,6 +27,10 @@ export default function StaffHome() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<Task | 'general' | null>(null)
+  const [asking, setAsking] = useState(false)
+  const [questions, setQuestions] = useState<Question[]>([])
+  const loadQuestions = useCallback(() => { questionsApi.mine().then((r) => setQuestions(r.questions)).catch(() => {}) }, [])
+  useEffect(loadQuestions, [loadQuestions])
   const [help, setHelp] = useState<Task | null>(null)
   const [openTask, setOpenTask] = useState<number | null>(null)
   const [showDone, setShowDone] = useState(false)
@@ -172,6 +177,22 @@ export default function StaffHome() {
         </>
       )}
 
+      {questions.length > 0 && (
+        <>
+          <div className="m-sec"><h2>Your questions</h2></div>
+          <div className="m-list">
+            {questions.slice(0, 4).map((q) => (
+              <div key={q.id} className={`m-q ${q.answer && !q.seen_at ? 'new' : ''}`} onClick={() => { if (q.answer && !q.seen_at) questionsApi.seen(q.id).then(loadQuestions).catch(() => {}) }}>
+                <span className="q-text">"{q.question}"</span>
+                {q.answer
+                  ? <span className="q-reply"><b>{q.answered_by_name?.split(' ')[0] ?? 'Committee'}:</b> {q.answer} {!q.seen_at && <i className="pill pill-saf">New</i>}</span>
+                  : <span className="muted small">Waiting for an answer · asked {timeAgo(q.created_at)}</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {schedule.length > 0 && (
         <>
           <div className="m-sec"><h2>Today at the temple</h2></div>
@@ -202,8 +223,9 @@ export default function StaffHome() {
 
       <div className="m-actions">
         <button className="btn btn-outline" onClick={() => setProblem('general')}><Icon name="alert" /> Report a problem</button>
-        <Link className="btn btn-outline" to="/staff/bookings"><Icon name="calendar" /> My bookings</Link>
+        <button className="btn btn-outline" onClick={() => setAsking(true)}><Icon name="message" /> Ask a question</button>
       </div>
+      <Link className="link-arrow" style={{ alignSelf: 'center' }} to="/staff/bookings">My bookings <Icon name="arrow-right" size={16} /></Link>
       <Link className="link-arrow" style={{ alignSelf: 'center' }} to="/staff/book">Book a hall or room <Icon name="arrow-right" size={16} /></Link>
       {onSite && me && (
         <button className="btn btn-outline btn-big" disabled={busy} onClick={() => { loadMe(); setLeaving(true) }}><Icon name="leave" /> I'm leaving</button>
@@ -211,6 +233,7 @@ export default function StaffHome() {
       {me && <button className="link-btn" style={{ alignSelf: 'center' }} onClick={() => setHistory(true)}>My attendance (30 days)</button>}
       <button className="signout" onClick={logout}>Sign out</button>
 
+      {asking && <QuestionSheet tasks={today.filter((t) => !isFinished(t))} onClose={() => setAsking(false)} onSent={(m) => { toast(m); setAsking(false); loadQuestions() }} />}
       {problem && <ProblemSheet task={problem === 'general' ? null : problem} onClose={() => setProblem(null)} onSent={loadTasks} />}
       {help && <HelpSheet task={help} onClose={() => setHelp(null)} onSent={() => { setOpenTask(null); loadTasks() }} />}
       {leaving && me && (

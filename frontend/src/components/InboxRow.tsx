@@ -10,6 +10,7 @@ import type { Issue, Role } from '../types'
 import RemindButton from './tasks/RemindButton'
 import { useAuth } from '../auth/AuthContext'
 import { can } from '../lib/access'
+import QuestionRow from './QuestionRow'
 
 type Action = () => Promise<{ message: string }>
 
@@ -142,6 +143,10 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
         </div>
       </div>
     )
+  }
+
+  if (item.kind === 'question' && item.question) {
+    return <QuestionRow q={item.question} canAnswer={can(user, 'tasks', 'manage')} act={act} />
   }
 
   if (item.kind === 'signups' && item.people) {

@@ -176,6 +176,24 @@ describe("public booking form (W1)", () => {
     });
 });
 
+describe("questions (M6)", () => {
+    test("staff ask, the committee answers, the asker sees it", async () => {
+        assert.equal((await post("/questions", "raghu", { question: "Can the chairman ask?" })).status, 403, "staff and volunteers ask");
+        assert.equal((await post("/questions", "anil", { question: "" })).status, 400);
+        assert.equal((await post("/questions", "anil", { question: "Where are the spare diyas kept?" })).status, 201);
+        const open = (await get("/questions?status=open", "meena")).body.questions;
+        const q = open.find((x) => x.question === "Where are the spare diyas kept?");
+        assert.ok(q, "in the Action Center");
+        assert.ok((await get("/tasks/summary", "raghu")).body.summary.open_questions >= 1, "counted in the badge");
+        assert.equal((await post(`/questions/${q.id}/answer`, "dev", { answer: "x" })).status, 403, "staff can't answer");
+        assert.equal((await post(`/questions/${q.id}/answer`, "meena", { answer: "In the store room, top shelf." })).status, 200);
+        const mine = (await get("/questions/mine", "anil")).body.questions.find((x) => x.id === q.id);
+        assert.equal(mine.answer, "In the store room, top shelf.");
+        assert.equal(mine.answered_by_name.split(" ")[0], "Meena");
+        assert.ok(!(await get("/questions?status=open", "raghu")).body.questions.some((x) => x.id === q.id), "no longer waiting");
+    });
+});
+
 describe("people", () => {
     test("committee can't change people by default; the chairman can, and can remove", async () => {
         const created = await post("/users", "raghu", { full_name: "Test Volunteer", email: `tv${Date.now()}@example.com`, role: "volunteer", password: "Testpass123" });

@@ -29,7 +29,7 @@ export const useAdminContext = () => useOutletContext<AdminContext>()
 // Everything in the Action Center: overdue tasks, reported problems, safety
 // sign-offs, booking requests and (for the chairman) sign-ups waiting for approval.
 export const actionCount = (s: TaskSummary | null, isChairman: boolean) =>
-  s ? s.overdue + s.open_issues + s.awaiting_signoff + s.pending_bookings + (isChairman ? s.pending_registrations : 0) : 0
+  s ? s.overdue + s.open_issues + s.awaiting_signoff + s.pending_bookings + (s.open_questions ?? 0) + (isChairman ? s.pending_registrations : 0) : 0
 
 // The admin web app sidebar, as in the designs (H1, AC1, T1, C1, P1, R1).
 const NAV: { to: string; label: string; icon: IconName; action?: boolean; area?: AccessArea }[] = [

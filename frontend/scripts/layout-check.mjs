@@ -52,6 +52,7 @@ const PAGES = [
   ['book a hall (public)', '/book', null, ['phone', 'tablet', 'desktop']],
   ['join: temple rules', '/join', null, ['phone', 'desktop'], `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Temple Rules')?.click()`],
   ['staff: notifications', '/staff', 'anil', ['phone'], clickSel('.m-bell')],
+  ['staff: ask a question', '/staff', 'anil', ['phone'], clickText('Ask a question')],
   ['home', '/admin', 'raghu', ALL],
   ['home: broadcast', '/admin', 'raghu', ['desktop', 'tablet'], clickText('Broadcast')],
   ['home: plan with AI', '/admin', 'raghu', ['desktop', 'tablet'], planChat('Navratri garba night, 300 people, Sat 12 Dec')],

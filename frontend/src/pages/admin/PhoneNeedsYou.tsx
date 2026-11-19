@@ -19,6 +19,7 @@ import type { Task, TaskSummary } from '../../types'
 import HandledIssue from '../../components/HandledIssue'
 import RemindButton from '../../components/tasks/RemindButton'
 import { useAccess } from '../../lib/access'
+import QuestionRow from '../../components/QuestionRow'
 
 // AC1 Needs you (phone) – Rao garu's phone (designs: screens/42_AC1, final review p.12–13).
 // The same admin app, laid out for a phone: everything waiting, one button per card.
@@ -131,6 +132,9 @@ function PhoneCard({ item, myId, onOpen, onOpenBooking, act }: { item: InboxItem
           : <button className="btn btn-primary" onClick={() => act(() => issuesApi.resolve(issue.id, ''))}>Mark fixed</button>}
       </div>
     )
+  }
+  if (item.kind === 'question' && item.question) {
+    return <QuestionRow q={item.question} canAnswer phone act={act} />
   }
   if (item.kind === 'signoff' && task) {
     return (

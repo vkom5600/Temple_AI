@@ -161,7 +161,8 @@ export const getSummary = async (req, res) => {
             COUNT(*) FILTER (WHERE status = 'flagged')::int                                       AS flagged,
             (SELECT COUNT(*)::int FROM issues WHERE status = 'open')                              AS open_issues,
             (SELECT COUNT(*)::int FROM users WHERE approval_status = 'pending')                   AS pending_registrations,
-            (SELECT COUNT(*)::int FROM bookings WHERE status = 'pending')                         AS pending_bookings
+            (SELECT COUNT(*)::int FROM bookings WHERE status = 'pending')                         AS pending_bookings,
+            (SELECT COUNT(*)::int FROM questions WHERE answered_at IS NULL)                       AS open_questions
          FROM (
             SELECT status, due_at,
                    COALESCE((due_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date,
