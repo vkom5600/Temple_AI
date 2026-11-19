@@ -1486,3 +1486,17 @@ tr.row-open:hover td { background: #fbfaf7; }
 .tag-soft { background: #efece6; color: var(--ink-2); }
 .no-caps { text-transform: none !important; letter-spacing: 0 !important; font-size: 13.5px !important; }
 .tag-upd { background: var(--saf); color: var(--ind-d); }
+
+/* H2 festival days */
+.fest-banner { display: flex; align-items: center; gap: 12px; background: #fff8ef; border: 1px solid #f6d9b5; border-radius: 14px; padding: 14px 20px; color: var(--ind-d); margin-bottom: 18px; flex-wrap: wrap; }
+.fest-banner svg { color: var(--saf-d); flex: none; }
+.fest-banner b { font-size: 16.5px; }
+.fest-banner .fest-right { margin-left: auto; color: var(--saf-d); font-size: 14.5px; font-weight: 500; }
+.fest-banner .fest-right a { color: var(--saf-d); }
+.fest-remind { display: flex; align-items: center; gap: 12px; background: #fffaf3; border: 1px solid #f6d9b5; border-radius: 14px; padding: 12px 18px; margin-bottom: 18px; color: var(--ind-d); flex-wrap: wrap; font-size: 15.5px; }
+.fest-remind .star { color: var(--saf); }
+.fest-remind .grow { min-width: 220px; }
+.mcal-fest { display: block; font-size: 12px; font-weight: 600; color: var(--saf-d); background: #fff4e5; border-radius: 6px; padding: 1px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal-fest.tbc::after { content: " ?"; }
+.fest-row { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.fest-row b { color: var(--ind-d); }

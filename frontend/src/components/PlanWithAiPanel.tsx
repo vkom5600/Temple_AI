@@ -49,7 +49,7 @@ const taskIcon = (t: PlanTask): IconName => {
   return 'check-circle'
 }
 
-export default function PlanWithAiPanel({ onClose, onConfirmed }: { onClose: () => void; onConfirmed: () => void }) {
+export default function PlanWithAiPanel({ idea, onClose, onConfirmed }: { idea?: string; onClose: () => void; onConfirmed: () => void }) {
   const toast = useToast()
   const [messages, setMessages] = useState<Message[]>([])
   const [said, setSaid] = useState<string[]>([])
@@ -66,6 +66,12 @@ export default function PlanWithAiPanel({ onClose, onConfirmed }: { onClose: () 
   useEffect(() => {
     usersApi.list().then((r) => setPeople(r.users.filter((u) => u.is_active && u.approval_status === 'approved' && u.role !== 'chairman'))).catch(() => {})
   }, [])
+  // Opened from a festival reminder: start with that idea
+  const started = useRef(false)
+  useEffect(() => {
+    if (idea && !started.current) { started.current = true; send(idea) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idea])
   // Braces matter: scrollIntoView returns a promise in newer browsers.
   useEffect(() => { if (view === 'chat') end.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, busy, view])
 

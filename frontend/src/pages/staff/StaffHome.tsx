@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { attendanceApi, bookingsApi, notificationsApi, tasksApi } from '../../api/endpoints'
+import { attendanceApi, bookingsApi, notificationsApi, tasksApi, festivalsApi } from '../../api/endpoints'
 import { Link } from 'react-router-dom'
 import { bookingTimes } from '../../lib/bookings'
 import { useAuth } from '../../auth/AuthContext'
-import { fmtDay, fmtInline, fmtTime, greeting, isToday, longDate, timeAgo } from '../../lib/format'
+import { fmtDay, fmtInline, fmtTime, greeting, isToday, longDate, timeAgo, toDateInput } from '../../lib/format'
 import { byDue, isFinished } from '../../lib/tasks'
 import { useToast } from '../../components/Toast'
 import { ErrorNote, Icon, Spinner, rowClick } from '../../components/ui'
@@ -12,7 +12,7 @@ import { HistoryDialog, LeavingSheet } from '../../components/attendance/CheckIn
 import ProblemSheet from '../../components/tasks/ProblemSheet'
 import HelpSheet from '../../components/tasks/HelpSheet'
 import VerifyList from '../../components/tasks/VerifyList'
-import type { AppNotification, ClosingChecks, MyAttendance, ScheduleItem, Task } from '../../types'
+import type { AppNotification, ClosingChecks, MyAttendance, ScheduleItem, Task, Festival } from '../../types'
 
 // Staff phone app: M1 Arriving and M2 Your tasks today (designs: screens/33_M1, 34_M2).
 // One scrolling page. Tasks unlock once you tap "I'm here"; "I'm leaving" checks you out.
@@ -39,6 +39,9 @@ export default function StaffHome() {
   const [message, setMessage] = useState<AppNotification | null>(null)
   // Confirmed bookings and temple events today ("Today at the temple", M2)
   const [schedule, setSchedule] = useState<ScheduleItem[]>([])
+  // M2: on a festival day the card says "Ekadashi" instead of "Good afternoon"
+  const [festival, setFestival] = useState<Festival | null>(null)
+  useEffect(() => { const d = toDateInput(new Date()); festivalsApi.list(d, d).then((r) => setFestival(r.festivals[0] ?? null)).catch(() => {}) }, [])
   useEffect(() => { bookingsApi.schedule().then((r) => setSchedule(r.bookings)).catch(() => {}) }, [])
   const loadMessage = useCallback(() => {
     notificationsApi.list()
@@ -96,7 +99,7 @@ export default function StaffHome() {
       <section className="m-hero">
         <Mandala />
         <div className="date">{longDate()}</div>
-        <h1>{greeting()}</h1>
+        <h1>{festival ? festival.name : greeting()}</h1>
         <div className="hchips">
           <span className="hchip"><Icon name="check-circle" size={16} /> {tasks ? `${done} of ${today.length} tasks done` : '…'}</span>
           {next && <span className="hchip"><Icon name="clock" size={16} /> Next: {fmtTime(next.due_at)}</span>}

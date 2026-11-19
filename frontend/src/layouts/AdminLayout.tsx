@@ -20,7 +20,7 @@ interface AdminContext {
   refreshSummary: () => void
   openBroadcast: () => void
   openAskAi: () => void
-  openPlan: () => void
+  openPlan: (idea?: string) => void
 }
 export const useAdminContext = () => useOutletContext<AdminContext>()
 
@@ -62,7 +62,7 @@ export default function AdminLayout() {
   const [menu, setMenu] = useState(false)
   const [asking, setAsking] = useState(false)
   const [broadcasting, setBroadcasting] = useState(false)
-  const [planning, setPlanning] = useState(false)
+  const [planning, setPlanning] = useState<false | { idea?: string }>(false)
   const [notes, setNotes] = useState(false)
   const { unread, refresh: refreshUnread } = useUnreadCount()
   const menuRef = useRef<HTMLDivElement>(null)
@@ -96,12 +96,12 @@ export default function AdminLayout() {
   if (!user) return null
   const isChairman = user.role === 'chairman'
   const waiting = actionCount(summary, isChairman)
-  const context: AdminContext = { summary, refreshSummary, openBroadcast: () => setBroadcasting(true), openAskAi: () => setAsking(true), openPlan: () => setPlanning(true) }
+  const context: AdminContext = { summary, refreshSummary, openBroadcast: () => setBroadcasting(true), openAskAi: () => setAsking(true), openPlan: (idea?: string) => setPlanning({ idea }) }
   const panels = (
     <>
       {asking && <AskAiPanel onClose={() => setAsking(false)} />}
       {broadcasting && <BroadcastDialog onClose={() => setBroadcasting(false)} />}
-      {planning && <PlanWithAiPanel onClose={() => setPlanning(false)} onConfirmed={refreshSummary} />}
+      {planning && <PlanWithAiPanel idea={planning.idea} onClose={() => setPlanning(false)} onConfirmed={refreshSummary} />}
       {notes && <NotificationsPanel onClose={() => { setNotes(false); refreshUnread() }} />}
     </>
   )

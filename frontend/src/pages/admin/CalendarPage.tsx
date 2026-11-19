@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../auth/AuthContext'
-import { bookingsApi, resourcesApi, tasksApi } from '../../api/endpoints'
+import { bookingsApi, resourcesApi, tasksApi, festivalsApi } from '../../api/endpoints'
 import { bookingTimes } from '../../lib/bookings'
 import { toDateInput } from '../../lib/format'
 import { assigneeLabel, byDue, hhmm, isFinished } from '../../lib/tasks'
@@ -8,6 +8,8 @@ import { Icon, Modal, Spinner } from '../../components/ui'
 import BookingForm, { type BookingDraft } from '../../components/bookings/BookingForm'
 import BookingReview from '../../components/bookings/BookingReview'
 import ResourcesDialog from '../../components/bookings/ResourcesDialog'
+import FestivalsDialog from '../../components/FestivalsDialog'
+import type { Festival } from '../../types'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import { useAdminContext } from '../../layouts/AdminLayout'
 import type { Booking, Resource, Task } from '../../types'
@@ -33,6 +35,8 @@ export default function CalendarPage() {
   const [viewingTask, setViewingTask] = useState<number | null>(null)
   const [viewingBooking, setViewingBooking] = useState<number | null>(null)
   const [adding, setAdding] = useState<BookingDraft | null>(null)
+  const [festivals, setFestivals] = useState<Festival[]>([])
+  const [managingFestivals, setManagingFestivals] = useState(false)
 
   // Load a little either side of what's on screen.
   const load = useCallback(() => {
@@ -42,6 +46,7 @@ export default function CalendarPage() {
       .then((r) => setBookings(r.bookings.filter((b) => b.status === 'approved' || b.status === 'pending')))
       .catch(() => setBookings([]))
     tasksApi.list({ view: 'all' }).then((r) => setTasks(r.tasks)).catch(() => setTasks([]))
+    festivalsApi.list(toDateInput(from), toDateInput(to)).then((r) => setFestivals(r.festivals)).catch(() => {})
   }, [view, month, day])
   useEffect(load, [load])
   const changed = () => { load(); refreshSummary() }
@@ -77,6 +82,7 @@ export default function CalendarPage() {
             <Icon name="calendar" size={18} />
             <span><b>Google Calendar <i className="dot-off" /></b><small>Not connected yet · 2-way when keys are added</small></span>
           </span>
+          <button className="btn btn-outline btn-lg" onClick={() => setManagingFestivals(true)}><Icon name="diya" size={18} /> Festivals</button>
           <button className="btn btn-primary btn-lg" onClick={() => setAdding({})}><Icon name="plus" size={18} /> Add to calendar</button>
         </div>
       </header>
@@ -131,6 +137,7 @@ export default function CalendarPage() {
                   <span className="mcal-num">{d.getDate()}</span>
                   {isToday && <span className="mcal-today">Today</span>}
                 </span>
+                {festivals.filter((f) => f.date === toDateInput(d)).map((f) => <span key={`f${f.id}`} className={`mcal-fest ${f.confirmed ? '' : 'tbc'}`} title={f.confirmed ? f.name : `${f.name} (date to confirm)`}>{f.name}</span>)}
                 {all.slice(0, 3).map((x) => <span key={x.key} className={`mcal-item ${x.cls}`}>{x.label}</span>)}
                 {all.length > 3 && <span className="mcal-more">+{all.length - 3} more</span>}
               </button>
@@ -182,6 +189,7 @@ export default function CalendarPage() {
         </Modal>
       )}
 
+      {managingFestivals && <FestivalsDialog onClose={() => setManagingFestivals(false)} onChanged={load} />}
       {adding && <BookingForm draft={adding} onClose={() => setAdding(null)} onSaved={changed} />}
       {viewingBooking && <BookingReview bookingId={viewingBooking} onClose={() => setViewingBooking(null)} onChanged={changed} />}
       {viewingTask && <TaskDetails taskId={viewingTask} onClose={() => setViewingTask(null)} onChanged={changed} />}

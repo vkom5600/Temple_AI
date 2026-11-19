@@ -13,9 +13,9 @@ import InboxRow from '../../components/InboxRow'
 import ConvertIssueForm from '../../components/tasks/ConvertIssueForm'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import BookingReview from '../../components/bookings/BookingReview'
-import { bookingsApi } from '../../api/endpoints'
+import { bookingsApi, festivalsApi } from '../../api/endpoints'
 import { bookingDay, bookingTimes } from '../../lib/bookings'
-import type { Booking, ScheduleItem } from '../../types'
+import type { Booking, FestivalHome, ScheduleItem } from '../../types'
 import type { Issue, Task } from '../../types'
 
 // H1 Home (design: screens/01_H1_home.png): what needs attention and today at the mandir.
@@ -36,6 +36,7 @@ export default function AdminHome() {
   const [viewingBooking, setViewingBooking] = useState<number | null>(null)
   const [bookings, setBookings] = useState<Booking[] | null>(null)
   const [schedule, setSchedule] = useState<ScheduleItem[]>([])
+  const [fest, setFest] = useState<FestivalHome | null>(null)
   const loadToday = useCallback(() => {
     tasksApi.list({ view: 'today' }).then((r) => setToday(r.tasks)).catch(() => setToday([]))
     tasksApi.list({ view: 'open' }).then((r) => setUpcoming(r.tasks)).catch(() => {})
@@ -43,6 +44,7 @@ export default function AdminHome() {
     const to = new Date(from); to.setDate(to.getDate() + 60)
     bookingsApi.list({ from: from.toISOString(), to: to.toISOString() }).then((r) => setBookings(r.bookings)).catch(() => setBookings([]))
     bookingsApi.schedule().then((r) => setSchedule(r.bookings)).catch(() => {})
+    festivalsApi.home().then(setFest).catch(() => {})
   }, [])
   useEffect(loadToday, [loadToday])
 
@@ -80,17 +82,47 @@ export default function AdminHome() {
               </span>
             )}
           </div>
-          {comingUp && (
+          {/* H1: the next festival (or, if none is listed, the next task) */}
+          {!fest?.today.length && (fest?.next ? (
+            <Link to="/admin/calendar" className="coming-up">Coming up: {fest.next.name} · {festDay(fest.next.date)} <Icon name="arrow-right" size={15} /></Link>
+          ) : comingUp && (
             <Link to="/admin/tasks?tab=upcoming" className="coming-up">Coming up: {comingUp.title} · {fmtDay(comingUp.due_at)} <Icon name="arrow-right" size={15} /></Link>
-          )}
+          ))}
         </div>
         <div className="head-actions">
-          <button className="btn btn-primary btn-lg" onClick={openPlan}><span className="star">✦</span> Plan with AI</button>
+          <button className="btn btn-primary btn-lg" onClick={() => openPlan()}><span className="star">✦</span> Plan with AI</button>
           <button className="btn btn-outline btn-lg" onClick={openBroadcast}><Icon name="send" size={17} /> Broadcast</button>
         </div>
       </header>
 
       <ErrorNote>{error}</ErrorNote>
+
+      {/* H2: festival day banner (designs 04 Ekadashi, 05 Diwali) */}
+      {fest?.today.map((f) => (
+        <div key={f.id} className="fest-banner">
+          <Icon name="diya" size={22} />
+          <b>{f.name} today{f.subtitle ? ` · ${f.subtitle}` : ''}</b>
+          <span className="fest-right">
+            {f.kind === 'festival'
+              ? [fest.events_today ? `${fest.events_today} festival event${fest.events_today === 1 ? '' : 's'}` : null, f.opens && f.closes ? `Extended hours ${f.opens}–${f.closes}` : null].filter(Boolean).join(' · ')
+              : fest.next ? <Link to="/admin/calendar">Coming up: {fest.next.name} · {festDay(fest.next.date)} →</Link> : null}
+          </span>
+        </div>
+      ))}
+
+      {/* H1 with a festival reminder (design 02): "Diwali is in 6 weeks..." */}
+      {fest?.reminder && (
+        <div className="fest-remind">
+          <span className="star">✦</span>
+          <span className="grow">
+            {fest.reminder.festival.name} is in {fest.reminder.days >= 14 ? `${Math.round(fest.reminder.days / 7)} weeks` : `${fest.reminder.days} day${fest.reminder.days === 1 ? '' : 's'}`}.
+            {fest.reminder.last_time ? ` Last time you ran ${fest.reminder.last_time.tasks} tasks${fest.reminder.last_time.volunteers ? ` and ${fest.reminder.last_time.volunteers} volunteers` : ''}.` : ' Nothing is planned yet.'}
+          </span>
+          <button className="btn btn-primary btn-sm" onClick={() => openPlan(`${fest.reminder!.festival.name} celebration, ${festDay(fest.reminder!.festival.date, true)}`)}>Plan it</button>
+          <button className="link-btn" onClick={() => festivalsApi.snooze(fest.reminder!.festival.id, 'week').then((r) => { toast(r.message); setFest({ ...fest, reminder: null }) }).catch(() => {})}>Later</button>
+          <button className="link-btn muted" onClick={() => festivalsApi.snooze(fest.reminder!.festival.id, 'year').then((r) => { toast(r.message); setFest({ ...fest, reminder: null }) }).catch(() => {})}>Not this year</button>
+        </div>
+      )}
 
       <div className="kpis">
         <TasksCard today={today} overdue={summary?.overdue ?? 0} />
@@ -277,3 +309,7 @@ function TodaySchedule({ tasks, bookings, onOpen, onOpenBooking }: { tasks: Task
     </section>
   )
 }
+
+// "Sun 16 Nov" (with the year for Plan with AI, so it never guesses)
+const festDay = (date: string, withYear = false) =>
+  new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) })

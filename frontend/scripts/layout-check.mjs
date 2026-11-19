@@ -66,6 +66,7 @@ const PAGES = [
   ['calendar month', '/admin/calendar', 'raghu', ALL],
   ['calendar: add', '/admin/calendar', 'raghu', ALL, clickText('Add to calendar')],
   ['calendar: day', '/admin/calendar', 'raghu', ['desktop', 'tablet'], clickSel('.mcal-day.today')],
+  ['calendar: festivals', '/admin/calendar', 'raghu', ['desktop', 'phone'], `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Festivals')?.click()`],
   ['calendar allocation', '/admin/calendar', 'raghu', ['desktop', 'tablet'], `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Allocation')?.click()`],
   ['people', '/admin/people', 'raghu', ALL],
   ['people: person', '/admin/people', 'raghu', ['desktop', 'tablet'], clickSel('tr.prow')],

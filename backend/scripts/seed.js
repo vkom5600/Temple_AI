@@ -278,3 +278,25 @@ export async function seedLastYearEvent(pool) {
     }
     console.log("Seeded last year's Diwali celebration (for Plan with AI).");
 }
+
+// A few festivals so Home and the Calendar have something to show. These dates are
+// NOT confirmed (confirmed = false shows "date to confirm"): the priest or committee
+// should check and correct them in Calendar → Festivals.
+export async function seedFestivals(pool) {
+    const any = await pool.query("SELECT 1 FROM festivals LIMIT 1");
+    if (any.rowCount) return;
+    const list = [
+        ["Diwali", "Festival of Lights", "2026-11-08", "festival", "07:00", "22:30"],
+        ["Makar Sankranti", null, "2027-01-14", "festival", null, null],
+        ["Maha Shivaratri", null, "2027-03-06", "festival", "07:00", "23:00"],
+        ["Holi", "Festival of Colours", "2027-03-22", "festival", null, null],
+        ["Ram Navami", null, "2027-04-15", "festival", null, null],
+        ["Diwali", "Festival of Lights", "2027-10-29", "festival", "07:00", "22:30"]
+    ];
+    for (const [name, subtitle, date, kind, opens, closes] of list) {
+        await pool.query(
+            `INSERT INTO festivals (name, subtitle, festival_date, kind, opens, closes, confirmed) VALUES ($1,$2,$3,$4,$5,$6,false)`,
+            [name, subtitle, date, kind, opens, closes]);
+    }
+    console.log(`Seeded ${list.length} festivals (dates to confirm).`);
+}

@@ -36,6 +36,7 @@ const PATHS = {
   download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>,
   link: <><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></>,
   qr: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" /></>,
+  diya: <><path d="M3 13c0 3.3 4 6 9 6s9-2.7 9-6H3z" /><path d="M12 3c1.5 2 2 3.3 2 4.5a2 2 0 0 1-4 0C10 6.3 10.5 5 12 3z" /><path d="M12 10v3" /></>,
   expand: <><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></>,
   car: <><path d="M5 17h14v-5l-2-5H7l-2 5z" /><path d="M5 12h14" /><circle cx="8" cy="17" r="2" /><circle cx="16" cy="17" r="2" /></>,
   cone: <><path d="M9.5 4h5L19 20H5z" /><path d="M8 11h8M6.5 16h11" /><path d="M3 20h18" /></>,

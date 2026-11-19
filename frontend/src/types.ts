@@ -384,3 +384,25 @@ export interface SignupWindow {
   next_opens: string | null
   reason: 'off' | 'no_roles' | 'not_yet' | 'ended' | null
 }
+
+// ---------- Phase 4: festival days (H2) ----------
+
+export interface Festival {
+  id: number
+  name: string
+  subtitle: string | null
+  date: string // YYYY-MM-DD
+  kind: 'festival' | 'observance'
+  opens: string | null
+  closes: string | null
+  confirmed: boolean
+  remind: boolean
+  snoozed_until: string | null
+}
+
+export interface FestivalHome {
+  today: Festival[]
+  next: Festival | null
+  reminder: { festival: Festival; days: number; last_time: { id: number; title: string; tasks: number; volunteers: number } | null } | null
+  events_today: number
+}

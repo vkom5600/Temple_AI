@@ -3,6 +3,8 @@ import type {
   PlanDraft,
   PlanEvent,
   PlanTask,
+  Festival,
+  FestivalHome,
   SignupRole,
   SignupWindow,
   AttendanceDay, AttendanceInput, AuditEntry, Booking, BookingDetail, BookingInput, BroadcastAudience, ClosingChecks, MyAttendance,
@@ -142,6 +144,17 @@ export const rulesApi = {
 export const aiApi = {
   ask: (question: string, history: { from: 'me' | 'ai'; text: string }[]) =>
     api<{ answer: string; source: string }>('/ai/ask', { method: 'POST', body: { question, history } }),
+}
+
+// H2 festival days
+export type FestivalInput = Omit<Festival, 'id' | 'snoozed_until'>
+export const festivalsApi = {
+  list: (from?: string, to?: string) => api<{ festivals: Festival[] }>(`/festivals${from ? `?from=${from}&to=${to ?? from}` : ''}`),
+  home: () => api<FestivalHome>('/festivals/home'),
+  create: (input: FestivalInput) => api<{ message: string; festival: Festival }>('/festivals', { method: 'POST', body: input }),
+  update: (id: number, input: FestivalInput) => api<{ message: string }>(`/festivals/${id}`, { method: 'PUT', body: input }),
+  remove: (id: number) => api<{ message: string }>(`/festivals/${id}`, { method: 'DELETE' }),
+  snooze: (id: number, span: 'week' | 'year') => api<{ message: string }>(`/festivals/${id}/snooze`, { method: 'POST', body: { for: span } }),
 }
 
 // R1 nightly report
