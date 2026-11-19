@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { TIMEZONE } from "./taskService.js";
 import { findClashes, prepTasksFor } from "./bookingService.js";
+import { aiEnabled, askJson } from "./aiService.js";
 
 // AI2 Plan with AI: turns "Navratri garba night, 300 people, Sat 14" into a draft
 // plan (a calendar event + the tasks to run it). Rule-based for now, so it never
@@ -200,18 +201,53 @@ const extrasFor = (kind, { title, place, guests, start, end }) => {
     return t;
 };
 
+// With Temple AI connected, Claude reads the idea (any wording, any language of dates);
+// without it, the rule-based reader below does. Returns null to use the rules.
+const IDEA_SCHEMA = {
+    type: "object",
+    additionalProperties: false,
+    required: ["title", "kind", "guests", "date", "start", "end", "space"],
+    properties: {
+        title: { type: "string", description: "Short event name, e.g. 'Navratri garba night'" },
+        kind: { type: "string", enum: ["festival", "puja", "meal", "class", "meeting", "event"] },
+        guests: { type: ["integer", "null"], description: "People expected, or null if not said" },
+        date: { type: ["string", "null"], description: "YYYY-MM-DD in temple time, or null if no day was given" },
+        start: { type: ["string", "null"], description: "HH:MM 24-hour, or null if not said" },
+        end: { type: ["string", "null"], description: "HH:MM 24-hour, or null if not said" },
+        space: { type: ["string", "null"], description: "Exact name of a space from the list if one was asked for, else null" },
+    },
+};
+
+const readIdea = async (said, spaces) => {
+    if (!aiEnabled()) return null;
+    const p = todayAtTemple();
+    const today = `${p.y}-${String(p.m + 1).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
+    const r = await askJson({
+        schema: IDEA_SCHEMA,
+        system: `You read a temple event idea and fill in the fields. Today is ${DAY_NAMES[p.weekday]} ${today} (temple time, UK). Resolve words like "next Sunday" or "Sat 14" to a real date on or after today. Only fill what the person actually said: use null for anything missing, never guess a date, time or headcount. The spaces are: ${spaces.join(", ")}.`,
+        messages: [{ role: "user", content: said.map((m, i) => `${i === 0 ? "Idea" : "Then"}: ${m}`).join("\n") }],
+    });
+    return r.ok ? r.data : null;
+};
+const hm = (v) => { const m = /^(\d{1,2}):(\d{2})$/.exec(v ?? ""); return m ? +m[1] * 60 + +m[2] : null; };
+
 // conversation: the user's messages so far. asked: questions already asked (so we don't nag).
 export const draftPlan = async ({ messages = [], asked = [] }) => {
     const said = messages.map((m) => String(m).trim()).filter(Boolean);
     if (!said.length) return { reply: "Tell me about the event: what it is, roughly how many people, and the day." };
 
-    const title = cleanTitle(said[0]);
-    const kind = kindOf(said.join(" "));
+    const resourceNames = (await pool.query("SELECT name FROM resources WHERE is_active ORDER BY sort_order, name")).rows.map((r) => r.name);
+    const ai = await readIdea(said, resourceNames);
+    const title = ai?.title?.trim() ? ai.title.trim()[0].toUpperCase() + ai.title.trim().slice(1) : cleanTitle(said[0]);
+    const kind = (ai && KINDS.find((k) => k.key === ai.kind)) || kindOf(said.join(" "));
     // Later messages win: look from the newest back
     const pick = (fn) => { for (let i = said.length - 1; i >= 0; i--) { const v = fn(said[i]); if (v !== null && v !== undefined) return v; } return null; };
-    const day = pick(parseDay);
-    const times = pick(parseTimes);
-    const guests = pick(parseGuests);
+    const aiDay = ai?.date && /^(\d{4})-(\d{2})-(\d{2})$/.test(ai.date) ? { y: +ai.date.slice(0, 4), m: +ai.date.slice(5, 7) - 1, d: +ai.date.slice(8, 10) } : null;
+    const day = aiDay ?? pick(parseDay);
+    const aiStart = hm(ai?.start);
+    const aiEnd = hm(ai?.end);
+    const times = aiStart !== null ? { start: aiStart, end: aiEnd ?? undefined } : pick(parseTimes);
+    const guests = Number.isInteger(ai?.guests) ? ai.guests : pick(parseGuests);
 
     if (!day) {
         return { reply: `${title}: lovely. Which day is it? (For example "Sat 14 Dec" or "next Sunday".)`, ask: "day" };
@@ -235,7 +271,8 @@ export const draftPlan = async ({ messages = [], asked = [] }) => {
     // The space: the one they named, else the smallest hall that fits everyone.
     const resources = (await pool.query("SELECT * FROM resources WHERE is_active ORDER BY sort_order, name")).rows;
     const all = said.join(" ").toLowerCase();
-    const named = resources.find((r) => r.name.toLowerCase().split(/\s+/).some((w) => w.length > 3 && w !== "hall" && w !== "room" && all.includes(w)) ||
+    const aiSpace = ai?.space ? resources.find((r) => r.name.toLowerCase() === ai.space.toLowerCase()) : null;
+    const named = aiSpace ?? resources.find((r) => r.name.toLowerCase().split(/\s+/).some((w) => w.length > 3 && w !== "hall" && w !== "room" && all.includes(w)) ||
                                        (r.name.match(/\b[a-z]\d+\b/i) && all.includes(r.name.match(/\b[a-z]\d+\b/i)[0].toLowerCase())));
     const venues = resources.filter((r) => ["hall", "mandir", "space", "room"].includes(r.kind) && r.capacity);
     const biggest = [...venues].sort((a, b) => b.capacity - a.capacity)[0];

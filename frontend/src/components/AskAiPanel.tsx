@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { attendanceApi, issuesApi, tasksApi } from '../api/endpoints'
+import { aiApi, attendanceApi, issuesApi, tasksApi } from '../api/endpoints'
 import { toDateInput } from '../lib/format'
 import { assigneeLabel } from '../lib/tasks'
 import { Icon, Modal } from './ui'
@@ -14,7 +14,7 @@ const QUESTIONS = ['Who attended this week?', 'Who is on site right now?', 'What
 const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : 'Any time')
 
-async function answer(question: string): Promise<Message> {
+async function answer(question: string, history: Message[]): Promise<Message> {
   const q = question.toLowerCase()
 
   if (/week|attended|attendance/.test(q)) {
@@ -102,9 +102,16 @@ async function answer(question: string): Promise<Message> {
     }
   }
 
-  return {
-    from: 'ai',
-    text: "I can't answer that yet. Temple AI is connected in Phase 3; for now I can answer the questions below from live data.",
+  // Anything else goes to Temple AI (Claude) when it's connected
+  try {
+    const r = await aiApi.ask(question, history.map((m) => ({ from: m.from, text: m.text })))
+    return { from: 'ai', text: r.answer, source: r.source }
+  } catch (err) {
+    const message = (err as Error).message
+    if (/isn't connected/i.test(message)) {
+      return { from: 'ai', text: "I can answer the questions below from live data. Temple AI (Claude) isn't connected yet, so I can't answer open questions." }
+    }
+    throw err
   }
 }
 
@@ -123,7 +130,7 @@ export default function AskAiPanel({ onClose }: { onClose: () => void }) {
     setMessages((m) => [...m, { from: 'me', text: question.trim() }])
     setBusy(true)
     try {
-      const reply = await answer(question)
+      const reply = await answer(question, messages)
       setMessages((m) => [...m, reply])
     } catch (err) {
       setMessages((m) => [...m, { from: 'ai', text: `Sorry, I couldn't fetch that: ${(err as Error).message}` }])
@@ -149,7 +156,7 @@ export default function AskAiPanel({ onClose }: { onClose: () => void }) {
         <form className="ai-input" onSubmit={submit}>
           <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything about the temple…" aria-label="Ask a question" autoFocus />
           <button className="btn btn-primary" disabled={!input.trim() || busy} aria-label="Send"><Icon name="arrow-right" size={18} /></button>
-          <span className="ai-note">Preview: answers come straight from live data. Temple AI (Claude) joins in Phase 3.</span>
+          <span className="ai-note">Answers come from your live temple data. AI can make mistakes, so check important details.</span>
         </form>
       }
     >

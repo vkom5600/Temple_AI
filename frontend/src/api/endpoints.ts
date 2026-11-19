@@ -138,6 +138,12 @@ export const rulesApi = {
   update: (id: number, input: Partial<TempleRule>) => api<{ rule: TempleRule; message: string }>(`/rules/${id}`, { method: 'PUT', body: input }),
 }
 
+// AI1 Ask AI backed by Claude (503 when no key is set; the panel then uses its built-in answers)
+export const aiApi = {
+  ask: (question: string, history: { from: 'me' | 'ai'; text: string }[]) =>
+    api<{ answer: string; source: string }>('/ai/ask', { method: 'POST', body: { question, history } }),
+}
+
 // AI2 Plan with AI: draft from the conversation, then confirm (event + tasks)
 export const plansApi = {
   draft: (messages: string[], asked: string[]) =>
