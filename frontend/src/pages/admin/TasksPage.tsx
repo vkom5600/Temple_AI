@@ -227,6 +227,7 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
           )}
           {late && <span className="red-text">· {lateBy(t.due_at!)} overdue</span>}
           {t.status === 'flagged' && <span className="saf-text">· ⚑ Couldn't do{t.last_comment && `: ${t.last_comment}`}</span>}
+          {(t.photo_count ?? 0) > 0 && <span className="photo-chip">· <Icon name="paperclip" size={13} /> {t.photo_count} photo{t.photo_count === 1 ? '' : 's'}</span>}
         </div>
       </div>
       <div className="t-side">

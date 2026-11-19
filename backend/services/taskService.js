@@ -39,7 +39,8 @@ export const TASK_SELECT = `
            (t.status = 'todo' AND t.due_at < NOW()) AS is_overdue,
            last_comment.comment      AS last_comment,
            last_comment.comment_type AS last_comment_type,
-           (SELECT COUNT(*)::int FROM task_comments c WHERE c.task_id = t.id) AS comment_count
+           (SELECT COUNT(*)::int FROM task_comments c WHERE c.task_id = t.id) AS comment_count,
+           (SELECT COUNT(*)::int FROM task_photos p WHERE p.task_id = t.id) AS photo_count
     FROM tasks t
     LEFT JOIN users assignee  ON assignee.id  = t.assigned_to
     LEFT JOIN users completer ON completer.id = t.completed_by

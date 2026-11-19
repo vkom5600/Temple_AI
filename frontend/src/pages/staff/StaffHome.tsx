@@ -14,6 +14,7 @@ import HelpSheet from '../../components/tasks/HelpSheet'
 import VerifyList from '../../components/tasks/VerifyList'
 import type { AppNotification, ClosingChecks, MyAttendance, ScheduleItem, Task, Festival, Question } from '../../types'
 import QuestionSheet from '../../components/QuestionSheet'
+import TaskPhotos from '../../components/tasks/TaskPhotos'
 
 // Staff phone app: M1 Arriving and M2 Your tasks today (designs: screens/33_M1, 34_M2).
 // One scrolling page. Tasks unlock once you tap "I'm here"; "I'm leaving" checks you out.
@@ -307,6 +308,7 @@ function TaskCard({ task: t, open, locked, busy, run, onOpen, onHelp }: {
             </div>
           )}
           {t.requires_verification && <div className="m saf-text"><Icon name="shield" size={14} /> Safety task: someone will check it after you</div>}
+          <TaskPhotos taskId={t.id} count={t.photo_count ?? 0} canAdd />
           <button className="btn btn-done btn-big" disabled={busy} onClick={() => run(() => tasksApi.complete(t.id))}><Icon name="check" /> Done</button>
           <button className="btn btn-outline btn-big" onClick={onHelp}><Icon name="alert" /> I need help</button>
         </div>
@@ -324,6 +326,7 @@ function TaskCard({ task: t, open, locked, busy, run, onOpen, onHelp }: {
               <p>{t.description}</p>
             </div>
           )}
+          <TaskPhotos taskId={t.id} count={t.photo_count ?? 0} canAdd={t.completed_by === user?.id} />
         </div>
       )}
 

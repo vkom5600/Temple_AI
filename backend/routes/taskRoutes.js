@@ -18,6 +18,7 @@ import {
     flagTask,
     addTaskComment
 } from "../controllers/taskController.js";
+import { addPhoto, deletePhoto, getPhoto, listPhotos } from "../controllers/taskPhotoController.js";
 
 import {
     authenticateToken,
@@ -48,6 +49,12 @@ router.patch("/:id/complete", completeTask);
 router.patch("/:id/undo", undoTask);
 router.patch("/:id/flag", flagTask);
 router.post("/:id/comments", requireAccess("tasks", "view"), addTaskComment);
+
+// Photos (raw image body, up to 1 MB; the phone shrinks them first)
+router.post("/:id/photos", express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: "1mb" }), addPhoto);
+router.get("/:id/photos", listPhotos);
+router.get("/:id/photos/:photoId", getPhoto);
+router.delete("/:id/photos/:photoId", deletePhoto);
 
 // Second-person sign-off of safety tasks (never your own)
 router.patch("/:id/verify", authorizeRoles(...SIGNOFF_ROLES), requireAccess("tasks", "manage"), verifyTask);

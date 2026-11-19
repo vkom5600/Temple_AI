@@ -117,6 +117,26 @@ describe("tasks", () => {
     });
 });
 
+describe("task photos", () => {
+    // a 1x1 JPEG
+    const jpeg = Buffer.from("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAA//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AN//Z", "base64");
+    const upload = (taskId, who, body = jpeg, type = "image/jpeg") =>
+        fetch(`${BASE}/tasks/${taskId}/photos`, { method: "POST", headers: { "Content-Type": type, Authorization: `Bearer ${tokens[who]}` }, body }).then((r) => r.status);
+    test("the person on the task adds a photo; others can't; the committee sees it", async () => {
+        const t = (await post("/tasks", "raghu", { title: "Test: photo task", assigned_group: "cleaner", due_at: inDays(0, 23).toISOString() })).body.tasks[0];
+        assert.equal(await upload(t.id, "anil"), 403, "not the priest's task");
+        assert.equal(await upload(t.id, "ramesh", Buffer.from("nope"), "text/plain"), 400, "images only");
+        assert.equal(await upload(t.id, "ramesh"), 201);
+        const list = (await get(`/tasks/${t.id}/photos`, "meena")).body.photos;
+        assert.equal(list.length, 1);
+        const img = await fetch(`${BASE}/tasks/${t.id}/photos/${list[0].id}`, { headers: { Authorization: `Bearer ${tokens.raghu}` } });
+        assert.equal(img.headers.get("content-type"), "image/jpeg");
+        assert.equal((await get(`/tasks/${t.id}`, "raghu")).body.task.photo_count, 1);
+        for (let i = 0; i < 3; i++) await upload(t.id, "ramesh");
+        assert.equal(await upload(t.id, "ramesh"), 400, "up to 4 per task");
+    });
+});
+
 describe("attendance", () => {
     test("check in once, then leave", async () => {
         await post("/attendance/undo-check-in", "ramesh").catch(() => {});

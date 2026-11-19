@@ -127,6 +127,7 @@ export interface Task {
   last_comment: string | null
   last_comment_type: TaskComment['comment_type'] | null
   comment_count: number
+  photo_count?: number
 }
 
 export interface TaskComment {

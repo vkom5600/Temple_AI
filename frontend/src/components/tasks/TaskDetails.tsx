@@ -11,6 +11,7 @@ import ConvertIssueForm from './ConvertIssueForm'
 import type { Issue, Task, TaskComment, TaskInput } from '../../types'
 import RemindButton from './RemindButton'
 import { ukAddDays, ukDate, ukParts } from '../../lib/uk'
+import TaskPhotos from './TaskPhotos'
 
 // T4 Task details and T5 Review a finished task (designs: screens/19_T4, 20_T5):
 // a side panel with the brief, the submission, the history, and the admin actions.
@@ -269,6 +270,13 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
                 <p className="muted small" style={{ margin: 0 }}>{task.completed_by_name} marked it done without a note.</p>
               )}
               {task.verified_by_name && <p className="small" style={{ margin: 0, color: 'var(--green)' }}><Icon name="check-circle" size={14} /> Signed off by {task.verified_by_name}, {fmtWhen(task.verified_at!)}</p>}
+            </section>
+          )}
+
+          {(task.photo_count ?? 0) > 0 && (
+            <section className="dsec">
+              <div className="dsec-head"><span>Photos</span><small className="muted">{task.photo_count} photo{task.photo_count === 1 ? '' : 's'}</small></div>
+              <TaskPhotos taskId={task.id} count={task.photo_count ?? 0} canAdd={false} />
             </section>
           )}
 

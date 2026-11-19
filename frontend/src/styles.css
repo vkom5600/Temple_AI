@@ -1578,3 +1578,14 @@ tr.row-open:hover td { background: #fbfaf7; }
 @media (max-width: 760px) { .wcal { grid-template-columns: 1fr; } .wcal-day { min-height: 0; } }
 .prep-open { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 0; background: none; text-align: left; padding: 0; cursor: pointer; min-width: 0; }
 .prep .bar { margin: 4px 0 10px; }
+
+/* Task photos */
+.task-photos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.photo-thumb { width: 72px; height: 72px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); padding: 0; cursor: zoom-in; background: #f1eee8; }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-add { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border: 1px dashed #c9c4d6; border-radius: 10px; color: var(--ind-d); font-weight: 600; font-size: 14px; cursor: pointer; background: #fff; }
+.photo-add.busy { opacity: .6; cursor: progress; }
+.photo-big { position: fixed; inset: 0; background: rgba(10, 10, 30, .82); display: grid; place-items: center; z-index: 200; cursor: zoom-out; }
+.photo-big img { max-width: 92vw; max-height: 86vh; border-radius: 12px; }
+.photo-big .icon-btn { position: absolute; top: 16px; right: 16px; color: #fff; }
+.photo-chip { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12.5px; }

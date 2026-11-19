@@ -12,7 +12,7 @@ volunteers on their phones.
   reminder for big festivals.
 - **Action Center:** overdue tasks, reported problems, safety sign-offs, booking requests
   (checked against the Temple Rules) and new sign-ups; "Done today".
-- **Tasks:** today, upcoming and all; one-off, no-deadline and repeating tasks; safety tasks
+- **Tasks:** today, upcoming and all; photos on tasks; one-off, no-deadline and repeating tasks; safety tasks
   with a second check; send back; reminders (by hand and automatic, hourly in the day).
 - **Calendar:** month view with bookings, temple events, tasks and festivals; the allocation
   view of every hall and room; add bookings and events; spaces; festivals list.
