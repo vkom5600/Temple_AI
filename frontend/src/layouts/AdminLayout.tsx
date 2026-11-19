@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { tasksApi } from '../api/endpoints'
 import { BRAND } from '../branding'
 import { ROLE_LABELS } from '../constants'
-import NotificationBell from '../components/NotificationBell'
+import { NotificationsPanel, useUnreadCount } from '../components/NotificationBell'
 import AskAiPanel from '../components/AskAiPanel'
 import BroadcastDialog from '../components/BroadcastDialog'
 import { Avatar, Icon, type IconName } from '../components/ui'
@@ -60,6 +60,8 @@ export default function AdminLayout() {
   const [menu, setMenu] = useState(false)
   const [asking, setAsking] = useState(false)
   const [broadcasting, setBroadcasting] = useState(false)
+  const [notes, setNotes] = useState(false)
+  const { unread, refresh: refreshUnread } = useUnreadCount()
   const menuRef = useRef<HTMLDivElement>(null)
 
   const refreshSummary = useCallback(() => {
@@ -96,6 +98,7 @@ export default function AdminLayout() {
     <>
       {asking && <AskAiPanel onClose={() => setAsking(false)} />}
       {broadcasting && <BroadcastDialog onClose={() => setBroadcasting(false)} />}
+      {notes && <NotificationsPanel onClose={() => { setNotes(false); refreshUnread() }} />}
     </>
   )
 
@@ -134,6 +137,7 @@ export default function AdminLayout() {
         <div className="sidebar-foot" ref={menuRef}>
           {menu && (
             <div className="me-menu" role="menu">
+              <button role="menuitem" onClick={() => { setMenu(false); setNotes(true) }}><Icon name="bell" /> Notifications{unread > 0 && <span className="count" style={{ marginLeft: 'auto' }}>{unread}</span>}</button>
               <Link to="/admin/attendance" role="menuitem"><Icon name="clock" /> Attendance records</Link>
               <Link to="/admin/issues" role="menuitem"><Icon name="flag" /> Issue history</Link>
               {isChairman && <Link to="/admin/settings" role="menuitem"><Icon name="settings" /> Settings</Link>}
@@ -142,11 +146,10 @@ export default function AdminLayout() {
           )}
           <div className="row" style={{ flexWrap: 'nowrap', gap: 4 }}>
             <button className="me-btn" onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-haspopup="menu">
-              <Avatar name={user.full_name} size={36} />
+              <span className="me-av"><Avatar name={user.full_name} size={36} />{unread > 0 && <i className="me-dot" aria-label={`${unread} unread notifications`} />}</span>
               <span className="who">{user.full_name.split(' ')[0]} · {ROLE_LABELS[user.role]}</span>
               <Icon name="chevron-down" size={16} />
             </button>
-            <NotificationBell align="up" />
           </div>
         </div>
       </aside>

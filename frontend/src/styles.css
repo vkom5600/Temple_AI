@@ -1357,3 +1357,7 @@ button.sched-what:hover { text-decoration: underline; }
 @media (max-width: 760px) { .mcal-today { display: none; } }
 /* Suggestion chips can wrap to two lines on narrow columns: softer corners read better */
 .hint { border-radius: 10px; line-height: 1.35; padding: 4px 12px; }
+/* Sidebar account row: unread dot on the avatar (no bell, as in the design) */
+.me-av { position: relative; display: inline-flex; flex: none; }
+.me-dot { position: absolute; top: -1px; right: -1px; width: 11px; height: 11px; border-radius: 50%; background: var(--saf); box-shadow: 0 0 0 2px var(--ind); }
+.me-menu .count { background: var(--saf); color: var(--ind-d); }

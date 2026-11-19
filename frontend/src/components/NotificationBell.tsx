@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { notificationsApi } from '../api/endpoints'
 import { timeAgo } from '../lib/format'
 import type { AppNotification } from '../types'
-import { Empty, Icon } from './ui'
+import { Empty, Icon, Modal } from './ui'
 
 const POLL_MS = 60_000
 
@@ -99,5 +99,68 @@ export default function NotificationBell({ align = 'down' }: { align?: 'down' | 
         </div>
       )}
     </div>
+  )
+}
+
+// ---------- Admin sidebar: no bell (not in the design). An unread dot on the avatar,
+// and "Notifications (n)" in the account menu opens this panel.
+
+export function useUnreadCount() {
+  const [unread, setUnread] = useState(0)
+  const refresh = useCallback(() => {
+    notificationsApi.unreadCount().then((r) => setUnread(r.unreadCount)).catch(() => {})
+  }, [])
+  useEffect(() => {
+    refresh()
+    const id = setInterval(() => document.visibilityState === 'visible' && refresh(), POLL_MS)
+    return () => clearInterval(id)
+  }, [refresh])
+  return { unread, refresh }
+}
+
+export function NotificationsPanel({ onClose }: { onClose: () => void }) {
+  const [items, setItems] = useState<AppNotification[] | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    notificationsApi.list().then((r) => setItems(r.notifications)).catch((e: Error) => setError(e.message))
+  }, [])
+
+  const markRead = async (n: AppNotification) => {
+    if (n.is_read) return
+    setItems((list) => list?.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)) ?? null)
+    await notificationsApi.markRead(n.id).catch(() => {})
+  }
+  const markAll = async () => {
+    setItems((list) => list?.map((x) => ({ ...x, is_read: true })) ?? null)
+    await notificationsApi.markAllRead().catch(() => {})
+  }
+  const unread = items?.filter((n) => !n.is_read).length ?? 0
+
+  return (
+    <Modal
+      title="Notifications"
+      size="drawer"
+      subtitle={unread ? `${unread} unread` : 'All caught up'}
+      onClose={onClose}
+      footer={unread > 0 ? <button className="btn btn-outline" onClick={markAll}>Mark all read</button> : undefined}
+    >
+      {error && <p className="red small">{error}</p>}
+      {!items && !error && <p className="muted small">Loading…</p>}
+      {items?.length === 0 && <Empty icon="bell">Nothing new.</Empty>}
+      {items && items.length > 0 && (
+        <ul className="bell-list">
+          {items.map((n) => (
+            <li key={n.id}>
+              <button className={`bell-item ${n.is_read ? '' : 'unread'}`} onClick={() => markRead(n)}>
+                <span className="strong">{n.title}</span>
+                {n.message && <span className="small">{n.message}</span>}
+                <span className="muted small">{timeAgo(n.created_at)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
   )
 }
