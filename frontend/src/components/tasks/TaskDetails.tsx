@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { tasksApi } from '../../api/endpoints'
+import { issuesApi, tasksApi } from '../../api/endpoints'
 import { useAuth } from '../../auth/AuthContext'
 import { PRIORITY_LABELS } from '../../constants'
 import { fmtTime, fmtWhen } from '../../lib/format'
@@ -7,7 +7,8 @@ import { assigneeLabel, repeatLabel } from '../../lib/tasks'
 import { useToast } from '../Toast'
 import { Avatar, ErrorNote, Icon, Modal, Spinner } from '../ui'
 import TaskForm from './TaskForm'
-import type { Task, TaskComment } from '../../types'
+import ConvertIssueForm from './ConvertIssueForm'
+import type { Issue, Task, TaskComment, TaskInput } from '../../types'
 
 // T4 Task details and T5 Review a finished task (designs: screens/19_T4, 20_T5):
 // a side panel with the brief, the submission, the history, and the admin actions.
@@ -49,9 +50,18 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [fixNote, setFixNote] = useState('')
   const [comment, setComment] = useState('')
+  // T6: the open problem this task was flagged with, a reply, and the fix-task form
+  const [issue, setIssue] = useState<Issue | null>(null)
+  const [reply, setReply] = useState('')
+  const [fixing, setFixing] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   const load = useCallback(() => {
-    tasksApi.get(taskId).then((r) => { setTask(r.task); setComments(r.comments) }).catch((e: Error) => setError(e.message))
+    tasksApi.get(taskId).then((r) => {
+      setTask(r.task)
+      setComments(r.comments)
+      if (r.task.status === 'flagged') issuesApi.list('open').then((x) => setIssue(x.issues.find((i) => i.task_id === r.task.id) ?? null)).catch(() => {})
+    }).catch((e: Error) => setError(e.message))
   }, [taskId])
 
   useEffect(load, [load])
@@ -82,6 +92,7 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
         onClose={() => setEditing(false)}
         onSubmit={async ([input]) => {
           const r = await tasksApi.update(task.id, input)
+          if (task.status === 'flagged' && issue) await issuesApi.resolve(issue.id, 'Reassigned')
           toast(r.message)
           onChanged()
           setEditing(false)
@@ -91,6 +102,23 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
     )
   }
 
+  // The task as a TaskInput, for "Extend deadline" (same task, due a day later)
+  const inputOf = (t: Task, due: string | null): TaskInput => ({
+    title: t.title, description: t.description ?? '', category: t.category, area: t.area ?? '',
+    assigned_to: t.assigned_to, assigned_group: t.assigned_group, priority: t.priority,
+    requires_verification: t.requires_verification, due_at: due, recurrence: t.recurrence,
+  })
+  const extend = () => run(async () => {
+    if (!task) return { message: '' }
+    const base = task.due_at ? new Date(task.due_at) : new Date()
+    if (base.getTime() < Date.now()) { const now = new Date(); base.setFullYear(now.getFullYear(), now.getMonth(), now.getDate()) }
+    base.setDate(base.getDate() + 1)
+    if (issue) await issuesApi.resolve(issue.id, `Moved to ${fmtWhen(base.toISOString())}`)
+    await tasksApi.update(task.id, inputOf(task, base.toISOString()))
+    return { message: `Moved to ${fmtWhen(base.toISOString())}` }
+  })
+  const flaggedNote = comments.filter((c) => c.comment_type === 'flagged').slice(-1)[0]
+
   const status = task ? (task.is_overdue ? { label: 'Overdue', cls: 'pill-red' } : STATUS[task.status]) : null
   const review = task?.status === 'awaiting_signoff'
   const ownWork = task?.completed_by === user?.id
@@ -98,7 +126,8 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
   const onTime = task?.completed_at && (!task.due_at || new Date(task.completed_at) <= new Date(task.due_at))
   const note = task && comments.find((c) => c.comment_type === 'comment' && c.user_id === task.completed_by)
 
-  const footer = task && (
+  // T6 has no footer (its actions are in the panel), except to confirm a cancel.
+  const footer = task && !(task.status === 'flagged' && !confirmCancel) && (
     review && !ownWork ? (
       <>
         <button className="btn btn-red-outline" disabled={!fixNote.trim() || busy} onClick={() => run(() => tasksApi.sendBack(task.id, fixNote.trim()), true)}>
@@ -157,6 +186,51 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
             {repeatLabel(task) && <span className="tag tag-saf">{repeatLabel(task)}</span>}
           </div>
 
+          {task.status === 'flagged' && (
+            <>
+              <div className="quote flagged-box">
+                <b><Icon name="flag" size={16} /> {flaggedNote?.user_name ?? 'Someone'} flagged a problem{flaggedNote && ` · ${fmtTime(flaggedNote.created_at)}`}</b>
+                <p>“{flaggedNote?.comment ?? task.last_comment}”</p>
+              </div>
+              <div className="suggest-box flag-suggest">
+                <span className="star">✦</span>
+                <div className="grow">
+                  <b>Suggestion</b>
+                  <ul>
+                    {/broken|fix|repair/i.test(issue?.category ?? flaggedNote?.comment ?? '') ? (
+                      <><li>Create a fix task for maintenance first</li><li>Then move this task to tomorrow</li></>
+                    ) : /time/i.test(issue?.category ?? flaggedNote?.comment ?? '') ? (
+                      <><li>Move this task to tomorrow, same time</li><li>Or give it to someone else with the same job</li></>
+                    ) : /supplies|find/i.test(issue?.category ?? flaggedNote?.comment ?? '') ? (
+                      <><li>Get the supplies (or ask a volunteer to)</li><li>Then move this task to tomorrow</li></>
+                    ) : (
+                      <><li>Give it to someone else, or to the whole job group</li><li>Let them know by replying below</li></>
+                    )}
+                  </ul>
+                </div>
+              </div>
+              <label className="dsec">
+                <span className="dsec-head"><span>Reply to {flaggedNote?.user_name?.split(' ')[0] ?? 'them'}</span></span>
+                <span className="row" style={{ flexWrap: 'nowrap' }}>
+                  <input value={reply} onChange={(e) => setReply(e.target.value)} maxLength={1000} placeholder={`Type a message to ${flaggedNote?.user_name?.split(' ')[0] ?? 'them'}…`} />
+                  <button type="button" className="btn btn-primary" disabled={!reply.trim() || busy} onClick={() => run(async () => { await tasksApi.comment(task.id, reply.trim()); setReply(''); return { message: `Sent to ${flaggedNote?.user_name?.split(' ')[0] ?? 'them'}'s phone` } })}>Send</button>
+                </span>
+                <span className="muted small">Goes to their phone.</span>
+              </label>
+              <div className="dsec">
+                <span className="dsec-head"><span>Or choose yourself</span></span>
+                <div className="choose-3">
+                  <button className="choose" disabled={!issue} onClick={() => setFixing(true)}><Icon name="plus" size={20} /> Create fix task</button>
+                  <button className="choose" disabled={busy} onClick={extend}><Icon name="clock" size={20} /> Extend deadline</button>
+                  <button className="choose" onClick={() => setEditing(true)}><Icon name="user" size={20} /> Reassign</button>
+                </div>
+                <button className="btn-text-red" style={{ alignSelf: 'flex-start' }} onClick={() => setConfirmCancel(true)}><Icon name="x" size={14} /> Cancel this task</button>
+              </div>
+              <button className="done-toggle" onClick={() => setShowHistory((v) => !v)} aria-expanded={showHistory}>Details &amp; history <Icon name="chevron-down" size={16} /></button>
+            </>
+          )}
+
+          {(task.status !== 'flagged' || showHistory) && <>
           <section className="dsec">
             <div className="dsec-head"><span>Task brief &amp; assignment</span><small>Created {fmtWhen(task.created_at)}</small></div>
             {task.description && (
@@ -217,6 +291,8 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
             </form>
           </section>
 
+          </>}
+
           {review && !ownWork && (
             <label className="dsec">
               <span className="dsec-head"><span>What needs fixing? <small>(optional note if sending back)</small></span></span>
@@ -227,6 +303,7 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
         </>
       )}
       <ErrorNote>{error}</ErrorNote>
+      {fixing && issue && <ConvertIssueForm issue={issue} onClose={() => setFixing(false)} onDone={(m) => { toast(m); setFixing(false); onChanged(); onClose() }} />}
     </Modal>
   )
 }

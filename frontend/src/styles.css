@@ -1307,3 +1307,42 @@ button.sched-what:hover { text-decoration: underline; }
 .kv svg { color: var(--saf-d); margin-top: 3px; flex: none; }
 .kv b { display: block; color: var(--ind-d); font-size: 15px; }
 .kv small { color: var(--muted); font-size: 13px; }
+
+/* M3 task opened, M4 I need help */
+.m-task { flex-direction: column; align-items: stretch; }
+.m-task-row { display: flex; gap: 12px; align-items: center; }
+.m-task-head { all: unset; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+.m-task-head .t, .m-task-head .m { display: block; }
+.m-task.open { border-left-color: var(--saf); box-shadow: 0 8px 24px -14px rgba(21, 20, 61, .35); }
+.m-task-body { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.what-to-do { border-top: 1px solid var(--line); padding-top: 10px; }
+.what-to-do p { margin: 4px 0 0; color: var(--ink); line-height: 1.45; }
+.btn-done { background: #10875a; color: #fff; }
+.btn-done:hover:not(:disabled) { background: #0b6f49; }
+.done-today { background: #efece6; border: 0; border-radius: 14px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; font: inherit; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.overlay-sheet { align-items: flex-end; padding: 0; }
+.modal-sheet { max-width: 560px; border-radius: 24px 24px 0 0; animation: rise-sheet .22s ease-out; }
+.modal-sheet .modal-head::before { content: ''; position: absolute; left: 50%; top: 10px; width: 44px; height: 5px; margin-left: -22px; border-radius: 3px; background: #d6d3de; }
+.modal-sheet .modal-head { position: relative; padding-top: 28px; }
+@keyframes rise-sheet { from { transform: translateY(40px); opacity: 0; } }
+.help-option { display: flex; align-items: center; gap: 14px; width: 100%; background: #f6f3ed; border: 1px solid #e7e1d6; border-radius: 14px; padding: 16px; font: inherit; font-size: 16.5px; color: var(--ind-d); text-align: left; cursor: pointer; }
+.help-option:hover:not(:disabled) { border-color: var(--ind); }
+.help-option svg:first-child { color: var(--ink-2); }
+.help-note { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--ind-soft); border: 1.5px solid #cfcde8; border-radius: 14px; padding: 14px; font: inherit; font-weight: 600; color: var(--ind-d); cursor: pointer; }
+/* T2 */
+.cell-title.struck { text-decoration: line-through; color: var(--muted); }
+.table-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--line); background: #fdfbf8; flex-wrap: wrap; }
+.pager { display: flex; gap: 6px; align-items: center; }
+.pg { min-width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font: inherit; font-weight: 600; color: var(--ind-d); cursor: pointer; }
+.pg.on { background: var(--ind-d); border-color: var(--ind-d); color: #fff; }
+/* T6 flagged task */
+.flagged-box b { color: var(--red); }
+.flagged-box b svg { color: var(--red); }
+.flag-suggest { flex-direction: row; }
+.flag-suggest ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2); }
+.flag-suggest b { color: var(--saf-d); }
+.choose-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.choose { display: flex; flex-direction: column; align-items: center; gap: 8px; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 16px 10px; font: inherit; font-weight: 600; color: var(--ind-d); cursor: pointer; }
+.choose:hover:not(:disabled) { border-color: var(--ind); }
+.choose:disabled { opacity: .5; cursor: not-allowed; }
+.choose svg { color: var(--ink-2); }

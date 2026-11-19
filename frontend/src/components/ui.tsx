@@ -80,7 +80,7 @@ interface ModalProps {
   footer?: ReactNode
   subtitle?: ReactNode
   head?: ReactNode // replaces the title row (side panels put a status pill there)
-  size?: 'normal' | 'wide' | 'drawer' // drawer = a panel on the right, as in T4/T5/P2/P5
+  size?: 'normal' | 'wide' | 'drawer' | 'sheet' // drawer = a panel on the right (T4/T5/P2/P5); sheet = from the bottom on phones (M4, M8)
 }
 
 export function Modal({ title, onClose, children, footer, subtitle, head, size = 'normal' }: ModalProps) {
@@ -91,7 +91,7 @@ export function Modal({ title, onClose, children, footer, subtitle, head, size =
   }, [onClose])
 
   return (
-    <div className={`overlay ${size === 'drawer' ? 'overlay-drawer' : ''}`} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className={`overlay ${size === 'drawer' ? 'overlay-drawer' : size === 'sheet' ? 'overlay-sheet' : ''}`} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`modal modal-${size}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
           {head ?? (

@@ -124,6 +124,7 @@ export function LeavingSheet({ me, busy, unfinished = [], onClose, onLeave }: {
   return (
     <Modal
       title={last ? "You're the last one here" : 'Leave now?'}
+      size="sheet"
       onClose={onClose}
       footer={
         <div className="stack" style={{ width: '100%' }}>

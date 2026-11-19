@@ -18,6 +18,7 @@ import {
 } from "../services/taskService.js";
 import { validateTaskBody } from "../utils/taskValidation.js";
 import { parseId } from "../utils/userValidation.js";
+import { ADMIN_ROLES } from "../middleware/authMiddleware.js";
 
 const MAX_BULK = 50;
 const REMIND_GAP_MINUTES = 5;
@@ -678,6 +679,13 @@ export const addTaskComment = async (req, res) => {
             title: `Comment on: ${task.title}`,
             message: `${req.user.full_name}: ${comment}`,
             type: "task"
+        });
+    } else if (ADMIN_ROLES.includes(req.user.role) && !isAssignedTo(task, req.user)) {
+        // An admin replying (T6 "Reply to Ramesh"): it goes to the people doing the task.
+        await notifyAssignees(task, {
+            title: `Message about: ${task.title}`,
+            message: `${req.user.full_name}: ${comment}`,
+            excludeUserId: req.user.id
         });
     }
 

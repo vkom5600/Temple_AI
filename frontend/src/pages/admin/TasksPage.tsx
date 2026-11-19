@@ -155,33 +155,7 @@ export default function TasksPage() {
         later.length ? <Section title="Coming up" tone="" tasks={later} onOpen={setViewing} act={act} showDay /> : <Empty icon="check">Nothing coming up.</Empty>
       )}
 
-      {tasks && tab === 'all' && (
-        list.length ? (
-          <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Task</th><th>Assigned to</th><th>Where</th><th>Due</th><th>Status</th></tr></thead>
-              <tbody>
-                {list.map((t) => (
-                  <tr key={t.id} className={t.is_overdue ? 'row-overdue' : ''}>
-                    <td>
-                      <button className="cell-title" onClick={() => setViewing(t.id)}>{t.title}</button>
-                      <div className="badges">
-                        <span className="tag tag-ind">{t.category}</span>
-                        {repeatLabel(t) && <span className="tag tag-grn">{repeatLabel(t)}</span>}
-                        {t.requires_verification && <span className="tag tag-red">Safety</span>}
-                      </div>
-                    </td>
-                    <td>{assigneeLabel(t)}</td>
-                    <td>{t.area ?? '—'}</td>
-                    <td className="nowrap">{fmtWhen(t.due_at)}</td>
-                    <td><StatusBadge task={t} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : <Empty icon="check">No tasks.</Empty>
-      )}
+      {tasks && tab === 'all' && <AllTasks list={list} onOpen={setViewing} />}
 
       {creating && (
         <TaskForm
@@ -262,5 +236,75 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
         )}
       </div>
     </div>
+  )
+}
+
+// T2 Tasks: All (design: screens/17_T2): status chips, a table, and pages of 10.
+const STATUS_CHIPS: { id: string; label: string; match: (t: Task) => boolean }[] = [
+  { id: 'all', label: 'All', match: () => true },
+  { id: 'todo', label: 'To do', match: (t) => t.status === 'todo' && !t.is_overdue },
+  { id: 'review', label: 'Awaiting review', match: (t) => t.status === 'awaiting_signoff' },
+  { id: 'blocked', label: "Couldn't do", match: (t) => t.status === 'flagged' },
+  { id: 'overdue', label: 'Overdue', match: (t) => t.status === 'todo' && t.is_overdue },
+  { id: 'done', label: 'Done', match: (t) => t.status === 'done' },
+]
+const PAGE_SIZE = 10
+
+function AllTasks({ list, onOpen }: { list: Task[]; onOpen: (id: number) => void }) {
+  const [status, setStatus] = useState('all')
+  const [page, setPage] = useState(0)
+  const chip = STATUS_CHIPS.find((c) => c.id === status)!
+  const rows = list.filter(chip.match)
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const current = Math.min(page, pages - 1)
+  const shown = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
+
+  return (
+    <>
+      <div className="fchips">
+        {STATUS_CHIPS.map((c) => (
+          <button key={c.id} className={`fchip ${status === c.id ? 'on' : ''}`} onClick={() => { setStatus(c.id); setPage(0) }}>
+            {c.label} <span className="muted">{list.filter(c.match).length}</span>
+          </button>
+        ))}
+      </div>
+      {rows.length ? (
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Task</th><th>Assigned to</th><th>Due</th><th>Status</th><th>For</th><th className="right">Action</th></tr></thead>
+            <tbody>
+              {shown.map((t) => (
+                <tr key={t.id} className={t.is_overdue ? 'row-overdue' : ''}>
+                  <td>
+                    <button className={`cell-title ${t.status === 'done' ? 'struck' : ''}`} onClick={() => onOpen(t.id)}>{t.title}</button>
+                    <div className="badges">
+                      {repeatLabel(t) && <span className="tag tag-grn">{repeatLabel(t)}</span>}
+                      {t.requires_verification && <span className="tag tag-red">Safety</span>}
+                    </div>
+                  </td>
+                  <td>{t.assigned_to_name ?? <span className="row" style={{ gap: 6 }}><Icon name="users" size={15} /> {assigneeLabel(t)}</span>}</td>
+                  <td className={`nowrap ${t.is_overdue ? 'red-text' : ''}`}>{t.due_at ? fmtWhen(t.due_at) : 'No deadline'}</td>
+                  <td><StatusBadge task={t} /></td>
+                  <td>{t.booking_id ? <span className="tag tag-ind">Booking</span> : <span className="muted">—</span>}</td>
+                  <td className="right"><button className="link-btn" onClick={() => onOpen(t.id)}>Edit</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="table-foot">
+            <span className="muted small">Showing {current * PAGE_SIZE + 1}–{current * PAGE_SIZE + shown.length} of {rows.length}</span>
+            {pages > 1 && (
+              <div className="pager">
+                <button className="icon-btn" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="Previous page"><Icon name="arrow-left" size={16} /></button>
+                {Array.from({ length: pages }, (_, i) => (
+                  <button key={i} className={`pg ${i === current ? 'on' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>
+                ))}
+                <button className="icon-btn" disabled={current === pages - 1} onClick={() => setPage(current + 1)} aria-label="Next page"><Icon name="arrow-right" size={16} /></button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : <Empty icon="check">No tasks here.</Empty>}
+    </>
   )
 }

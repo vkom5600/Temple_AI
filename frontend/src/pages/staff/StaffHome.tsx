@@ -10,6 +10,7 @@ import { ErrorNote, Icon, Spinner } from '../../components/ui'
 import { Mandala } from '../../components/Ornaments'
 import { HistoryDialog, LeavingSheet } from '../../components/attendance/CheckInCard'
 import ProblemSheet from '../../components/tasks/ProblemSheet'
+import HelpSheet from '../../components/tasks/HelpSheet'
 import VerifyList from '../../components/tasks/VerifyList'
 import type { AppNotification, ClosingChecks, MyAttendance, ScheduleItem, Task } from '../../types'
 
@@ -25,6 +26,9 @@ export default function StaffHome() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<Task | 'general' | null>(null)
+  const [help, setHelp] = useState<Task | null>(null)
+  const [openTask, setOpenTask] = useState<number | null>(null)
+  const [showDone, setShowDone] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [history, setHistory] = useState(false)
 
@@ -143,9 +147,20 @@ export default function StaffHome() {
         <div className="lock-note"><Icon name="lock" size={16} /> {leftToday ? 'Tap "I\'m back" above to carry on with tasks' : 'Tap "I\'m here" above to unlock and start tasks'}</div>
       )}
       {tasks && !today.length && <p className="muted">Nothing on your list today.</p>}
-      {today.map((t) => (
-        <TaskCard key={t.id} task={t} locked={!onSite} busy={busy} run={run} onProblem={() => setProblem(t)} />
+      {today.filter((t) => !isFinished(t)).map((t) => (
+        <TaskCard key={t.id} task={t} open={openTask === t.id} locked={!onSite} busy={busy} run={run}
+          onOpen={() => setOpenTask((id) => (id === t.id ? null : t.id))} onHelp={() => setHelp(t)} />
       ))}
+      {done > 0 && (
+        <>
+          <button className="done-today" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>
+            Done today ({done}) <Icon name="chevron-down" size={16} />
+          </button>
+          {showDone && today.filter(isFinished).map((t) => (
+            <TaskCard key={t.id} task={t} open={false} locked={false} busy={busy} run={run} onOpen={() => {}} onHelp={() => {}} />
+          ))}
+        </>
+      )}
 
       {schedule.length > 0 && (
         <>
@@ -187,6 +202,7 @@ export default function StaffHome() {
       <button className="signout" onClick={logout}>Sign out</button>
 
       {problem && <ProblemSheet task={problem === 'general' ? null : problem} onClose={() => setProblem(null)} onSent={loadTasks} />}
+      {help && <HelpSheet task={help} onClose={() => setHelp(null)} onSent={() => { setOpenTask(null); loadTasks() }} />}
       {leaving && me && (
         <LeavingSheet
           me={me}
@@ -201,12 +217,16 @@ export default function StaffHome() {
   )
 }
 
-function TaskCard({ task: t, locked, busy, run, onProblem }: {
+// M2 task card; tapping Start opens it in place (M3 Task opened): when, where, who it's
+// from, what to do, then Done or I need help (M4).
+function TaskCard({ task: t, open, locked, busy, run, onOpen, onHelp }: {
   task: Task
+  open: boolean
   locked: boolean
   busy: boolean
   run: (action: () => Promise<Result>) => Promise<boolean>
-  onProblem: () => void
+  onOpen: () => void
+  onHelp: () => void
 }) {
   const { user } = useAuth()
   const finished = isFinished(t)
@@ -214,35 +234,50 @@ function TaskCard({ task: t, locked, busy, run, onProblem }: {
   const tone = finished ? 's-grn done' : late ? 's-red' : t.requires_verification ? 's-saf' : ''
   const note = t.status === 'todo' && (t.last_comment_type === 'sent_back' || t.last_comment_type === 'system') ? t.last_comment : null
   const isLocked = locked && t.status === 'todo'
+  const expanded = open && t.status === 'todo' && !isLocked
 
   return (
-    <div className={`m-task ${tone} ${isLocked ? 'locked' : ''}`}>
-      <div className="txt">
-        <div className="t">{t.title}</div>
-        <div className="m">
-          {late ? <b className="red">Was due {fmtInline(t.due_at)}</b> : t.due_at ? `By ${fmtTime(t.due_at)}` : 'Any time'}
-          {t.area && ` · ${t.area}`}
-          {t.requires_verification && ' · Safety'}
-          {t.assigned_group && ' · shared'}
-        </div>
-        {t.status === 'awaiting_signoff' && <div className="m saf-text">Done · waiting for a second check</div>}
-        {t.verified_by_name && <div className="m" style={{ color: 'var(--green)' }}>Signed off by {t.verified_by_name}</div>}
-        {t.status === 'done' && t.completed_by !== user?.id && t.completed_by_name && <div className="m">Done by {t.completed_by_name}</div>}
-        {t.status === 'flagged' && <div className="m red">Reported: {t.last_comment}</div>}
-        {note && <div className="sentback">{t.last_comment_type === 'sent_back' ? 'Sent back: ' : ''}{note}</div>}
-        {!isLocked && (
-          <div className="links">
-            {t.status === 'todo' && <button className="link-btn" onClick={onProblem}><Icon name="flag" size={14} /> Can't do this?</button>}
-            {finished && !t.verified_by && t.completed_by === user?.id && (
-              <button className="link-btn muted" disabled={busy} onClick={() => run(() => tasksApi.undo(t.id))}><Icon name="undo" size={14} /> Undo</button>
-            )}
-          </div>
-        )}
+    <div className={`m-task ${tone} ${isLocked ? 'locked' : ''} ${expanded ? 'open' : ''}`}>
+      <div className="m-task-row">
+        <button className="txt m-task-head" onClick={t.status === 'todo' && !isLocked ? onOpen : undefined} aria-expanded={expanded}>
+          <span className="t">{t.title}</span>
+          <span className="m">
+            {late ? <b className="red">Late · was due {fmtInline(t.due_at)}</b> : t.due_at ? `By ${fmtTime(t.due_at)}` : 'Any time'}
+            {t.area && ` · ${t.area}`}
+            {t.requires_verification && ' · Safety'}
+            {t.assigned_group && ' · shared'}
+          </span>
+          {t.status === 'awaiting_signoff' && <span className="m saf-text">Done · waiting for a second check</span>}
+          {t.verified_by_name && <span className="m" style={{ color: 'var(--green)' }}>Signed off by {t.verified_by_name}</span>}
+          {t.status === 'done' && t.completed_by !== user?.id && t.completed_by_name && <span className="m">Done by {t.completed_by_name}</span>}
+          {t.status === 'flagged' && <span className="m red">Asked for help: {t.last_comment}</span>}
+          {note && <span className="sentback">{t.last_comment_type === 'sent_back' ? 'Sent back: ' : ''}{note}</span>}
+        </button>
+        {t.status === 'todo' && !isLocked && !expanded && <button className="btn btn-outline" onClick={onOpen}>Start</button>}
+        {expanded && <button className="icon-btn" onClick={onOpen} aria-label="Close"><Icon name="chevron-down" size={20} /></button>}
+        {finished && <span className="tile-ic ic-grn" aria-label="Done"><Icon name="check" size={20} /></span>}
       </div>
-      {t.status === 'todo' && !isLocked && (
-        <button className="btn btn-primary" disabled={busy} onClick={() => run(() => tasksApi.complete(t.id))}>Done</button>
+
+      {expanded && (
+        <div className="m-task-body">
+          <div className="kv"><Icon name="clock" size={16} /><span>{t.due_at ? `By ${fmtTime(t.due_at)} ${isToday(t.due_at) ? 'today' : fmtDay(t.due_at)}` : 'Any time today'}</span></div>
+          {t.area && <div className="kv"><Icon name="pin" size={16} /><span>{t.area}</span></div>}
+          {t.created_by_name && <div className="kv"><Icon name="user" size={16} /><span>From {t.created_by_name.split(' ')[0]}</span></div>}
+          {t.description && (
+            <div className="what-to-do">
+              <span className="ulabel">What to do</span>
+              <p>{t.description}</p>
+            </div>
+          )}
+          {t.requires_verification && <div className="m saf-text"><Icon name="shield" size={14} /> Safety task: someone will check it after you</div>}
+          <button className="btn btn-done btn-big" disabled={busy} onClick={() => run(() => tasksApi.complete(t.id))}><Icon name="check" /> Done</button>
+          <button className="btn btn-outline btn-big" onClick={onHelp}><Icon name="alert" /> I need help</button>
+        </div>
       )}
-      {finished && <span className="tile-ic ic-grn" aria-label="Done"><Icon name="check" size={20} /></span>}
+
+      {finished && !t.verified_by && t.completed_by === user?.id && (
+        <button className="link-btn muted" style={{ alignSelf: 'flex-start' }} disabled={busy} onClick={() => run(() => tasksApi.undo(t.id))}><Icon name="undo" size={14} /> Undo</button>
+      )}
     </div>
   )
 }
