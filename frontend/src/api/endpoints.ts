@@ -1,5 +1,10 @@
 import { api } from './client'
 import type {
+  PlanDraft,
+  PlanEvent,
+  PlanTask,
+  SignupRole,
+  SignupWindow,
   AttendanceDay, AttendanceInput, AuditEntry, Booking, BookingDetail, BookingInput, BroadcastAudience, ClosingChecks, MyAttendance,
   Resource, ScheduleItem, TempleRule,
   AppNotification, AuthUser, Issue, RegisterInput, Setting, Task, TaskComment, TaskInput, TaskSummary, TaskView, User, UserInput,
@@ -9,7 +14,7 @@ export const authApi = {
   login: (email: string, password: string) =>
     api<{ token: string; user: AuthUser }>('/auth/login', { method: 'POST', body: { email, password } }),
   profile: () => api<{ user: AuthUser }>('/auth/profile'),
-  registrationStatus: () => api<{ open: boolean }>('/auth/registration-status'),
+  registrationStatus: () => api<{ open: boolean; roles: SignupRole[]; next_opens: string | null; closes: string | null }>('/auth/registration-status'),
   register: (input: RegisterInput) => api<{ message: string }>('/auth/register', { method: 'POST', body: input }),
 }
 
@@ -29,6 +34,10 @@ export const settingsApi = {
   list: () => api<{ settings: Setting[] }>('/settings'),
   update: (key: Setting['key'], value: boolean | string) =>
     api<{ settings: Setting[] }>(`/settings/${key}`, { method: 'PUT', body: { value } }),
+  // P4 sign-up window
+  signupWindow: () => api<{ window: SignupWindow; pending: number }>('/settings/signup-window'),
+  saveSignupWindow: (input: { open: boolean; roles: SignupRole[]; opens: string | null; closes: string | null }) =>
+    api<{ window: SignupWindow; message: string }>('/settings/signup-window', { method: 'PUT', body: input }),
 }
 
 export const notificationsApi = {
@@ -127,4 +136,12 @@ export const rulesApi = {
   list: (all = false) => api<{ rules: TempleRule[] }>(`/rules${all ? '?all=1' : ''}`),
   create: (input: Partial<TempleRule>) => api<{ rule: TempleRule; message: string }>('/rules', { method: 'POST', body: input }),
   update: (id: number, input: Partial<TempleRule>) => api<{ rule: TempleRule; message: string }>(`/rules/${id}`, { method: 'PUT', body: input }),
+}
+
+// AI2 Plan with AI: draft from the conversation, then confirm (event + tasks)
+export const plansApi = {
+  draft: (messages: string[], asked: string[]) =>
+    api<{ reply: string; ask?: string; draft?: PlanDraft }>('/plans/draft', { method: 'POST', body: { messages, asked } }),
+  confirm: (event: PlanEvent, tasks: PlanTask[]) =>
+    api<{ message: string; tasks: number }>('/plans/confirm', { method: 'POST', body: { event, tasks } }),
 }

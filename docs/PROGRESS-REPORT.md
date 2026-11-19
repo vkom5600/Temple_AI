@@ -40,8 +40,8 @@
 | Status | Pages |
 |---|---|
 | ✅ Built, real data (database → server → screen) | H1, H3, AC1, AC2, AC3, AC4, T1–T7, C1, C3, C4, P1, P2, P3, P5, R1, R2, G1, G2 · M1, M2, M3, M4, M5, M7, M8, M9, M11, M13 · W2, W3 · plus Rao garu's phone (AC1/AC2 phone) and the Allocation view |
-| ◐ Partly | AI1 Ask AI (answers common questions from live data; not Claude yet) · P4 sign-up window (open/close switch only; no dates, link or QR) · G3 settings (closing time, sign-up and login alerts; not temple timings or rooms) · M10 after leaving ("I'm back" only) |
-| ✗ Not started | H2 festival-day Home · AI2 Plan with AI · C2 week view · C5 event details · M6 ask a question · M12 language · W1 public hall form |
+| ◐ Partly | AI1 Ask AI (answers common questions from live data; not Claude yet) · G3 settings (closing time, sign-up and login alerts; not temple timings or rooms) · M10 after leaving ("I'm back" only) |
+| ✗ Not started | H2 festival-day Home · C2 week view · C5 event details · M6 ask a question · M12 language · W1 public hall form |
 
 **What "working" means, feature by feature:**
 
@@ -84,12 +84,12 @@
 | **P1** | People | ✅ | "x of y on site" bar with who isn't in yet; search; role filter; one table grouped **Staff / Volunteers / Committee** with phone, email and today's status (*On site · 08:10*, *Left*, *Not in yet*, *Absent*). |
 | **P2** | Person details | ✅ | Name, status pill, job, **Staff / Volunteer / Committee** switch, phone, email, emergency contact, joined, password reset; **Active** bar with switch off; **Last 7 days** attendance dots; **Today's tasks**. |
 | P3 | Add person | ✅ | Same form, empty. |
-| P4 | Sign-up window | ✅ partly | The **Sign-ups Open/Closed** switch is on People. Dates, link and QR code are Phase 4. |
+| P4 | Sign-up window | ✅ | Card on People (Open/Closed switch, dates, **Copy sign-up link**, **Show QR code**, who's waiting). The window sets **who can sign up** (volunteers, staff, committee) and **open/close dates** (closes by itself); printable QR code; the join page (/join) only offers open groups and says when the next window opens. |
 | **P5** | Check new sign-ups | ✅ | Side panel, one card per person: when they signed up, phone, email, **Joining as** (with a warning for committee), **Approve** / **Not now** (with a reason that is emailed to them). |
 | **R1** | Reports: Summary | ✅ | Daily / Weekly / Monthly report written from the records: tasks done (with change on last period), attendance, issues, what needs attention. **Copy as email**, **Download PDF**. Phase 4 swaps in the AI-written nightly version. |
 | **R2** | Activity log | ✅ | Every change in plain sentences ("Raghu approved 'Kitchen deep clean'"), grouped by day, filter and search, Load older. |
 | **AI1** | Ask AI | ✅ preview | Side panel on every page (⌘K), also *Plan with AI* on Home. Answers the common questions from live data (who attended this week, as a table; who's on site; what's not done; safety checks; open problems). **Temple AI (Claude) is Phase 3.** |
-| AI2 | Plan with AI | ◻ Phase 3 | |
+| AI2 | Plan with AI | ✅ preview | **Plan with AI** on Home (separate from Ask AI). Describe an event; it asks what's missing, checks the hall's capacity, clashes, closing time and weekday, and offers the jobs as tick-box cards (Add to plan, Change who). The draft plan (event + tasks) is editable; **Confirm plan** puts it on the Calendar, creates the tasks and tells the people assigned. For a repeat event it starts from **last time's plan** (Same / Updated / New). Rule-based until the Claude key is added. |
 | **H3** | Broadcast | ✅ | Everyone / All staff / All volunteers / Committee, or chosen jobs; "Will reach N people · on duty now"; 280 characters; **Mark as urgent**. Staff see it at the top of their phone with **Got it** (M2). |
 | H2 | Festival-day Home | ◻ Phase 4 | |
 | G1 | Sign in | ✅ | Built in the W2 style (indigo bar with the logo). |
@@ -165,7 +165,6 @@ Earlier decisions (roles, sign-off rules, repeating tasks, attendance) are in `d
 - **Broadcast (H3)** and "Message from Raghu" on phones.
 - **Festival Home (H2)**.
 - **Reports R1/R2:** the nightly report, and the activity log page.
-- **Sign-up window details (P4):** dates, link, QR.
 - **Phone screens:** M3 Task opened, M4 I need help, Language (M12).
 - **Committee access per area** (Off / View / Manage, from P2/P3).
 
@@ -173,7 +172,6 @@ Earlier decisions (roles, sign-off rules, repeating tasks, attendance) are in `d
 
 **Back end with Megha** (from the design pack):
 - Access per person (Off/View/Manage per area), checked on every request.
-- Sign-up window (who can join, dates, link).
 - Bookings with the rules agreed and the prep tasks drafted on approval.
 - AI answers only from areas the person can see.
 

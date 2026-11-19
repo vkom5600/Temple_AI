@@ -34,6 +34,15 @@ const PATHS = {
   phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2z" />,
   mail: <><rect x="2" y="4" width="20" height="16" rx="2" /><polyline points="22 6 12 13 2 6" /></>,
   download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>,
+  link: <><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></>,
+  qr: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" /></>,
+  expand: <><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></>,
+  car: <><path d="M5 17h14v-5l-2-5H7l-2 5z" /><path d="M5 12h14" /><circle cx="8" cy="17" r="2" /><circle cx="16" cy="17" r="2" /></>,
+  cone: <><path d="M9.5 4h5L19 20H5z" /><path d="M8 11h8M6.5 16h11" /><path d="M3 20h18" /></>,
+  megaphone: <><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z" /><path d="M17 9a4 4 0 0 1 0 6" /><path d="M7 14l1 5h3l-1-4" /></>,
+  broom: <><path d="M14 4l6 6" /><path d="M17 7l-7 7" /><path d="M10 14l-6 6h6l3-3" /><path d="M7 11l6 6" /></>,
+  pot: <><path d="M4 10h16v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z" /><path d="M2 10h20" /><path d="M9 6c0-1 1-1 1-2M14 6c0-1 1-1 1-2" /></>,
+  flower: <><circle cx="12" cy="10" r="2.5" /><path d="M12 7.5C12 4 9 3 9 3s-1 4 3 4.5M12 7.5C12 4 15 3 15 3s1 4-3 4.5M9.5 10C6 10 5 13 5 13s4 1 4.5-3M14.5 10c3.5 0 4.5 3 4.5 3s-4 1-4.5-3" /><path d="M12 12.5V21" /></>,
   more: <><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none" /></>,
   edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>,
   trash: <><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></>,
@@ -85,9 +94,11 @@ interface ModalProps {
   subtitle?: ReactNode
   head?: ReactNode // replaces the title row (side panels put a status pill there)
   size?: 'normal' | 'wide' | 'drawer' | 'sheet' // drawer = a panel on the right (T4/T5/P2/P5); sheet = from the bottom on phones (M4, M8)
+  className?: string
+  hideClose?: boolean // when the head draws its own close button
 }
 
-export function Modal({ title, onClose, children, footer, subtitle, head, size = 'normal' }: ModalProps) {
+export function Modal({ title, onClose, children, footer, subtitle, head, size = 'normal', className = '', hideClose = false }: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -96,7 +107,7 @@ export function Modal({ title, onClose, children, footer, subtitle, head, size =
 
   return (
     <div className={`overlay ${size === 'drawer' ? 'overlay-drawer' : size === 'sheet' ? 'overlay-sheet' : ''}`} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal modal-${size}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={`modal modal-${size} ${className}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
           {head ?? (
             <div>
@@ -104,7 +115,7 @@ export function Modal({ title, onClose, children, footer, subtitle, head, size =
               {subtitle && <p className="modal-sub">{subtitle}</p>}
             </div>
           )}
-          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
+          {!hideClose && <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>}
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}

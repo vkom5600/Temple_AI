@@ -5,7 +5,7 @@ import { ErrorNote, Spinner } from '../../components/ui'
 import type { Setting } from '../../types'
 
 const HELP: Record<Setting['key'], string> = {
-  registration_open: 'When off, the Register page says registration is closed.',
+  registration_open: 'The main switch for sign-ups. Who can sign up, and when, is set in People → Sign-up window.',
   login_alert_to_chairman: 'An email each time a committee member, staff or volunteer signs in.',
   closing_time: "After this time, you're told if anyone is still checked in or nobody confirmed lamps, gas and doors.",
 }
@@ -47,7 +47,7 @@ export default function SettingsPage() {
       <section className="panel">
         <ErrorNote>{error}</ErrorNote>
         {!settings && !error && <Spinner />}
-        {settings?.map((s) => (
+        {settings?.filter((s) => s.key in HELP).map((s) => (
           <div key={s.key} className="setting-row">
             <div className="grow">
               <div className="strong">{s.label}</div>

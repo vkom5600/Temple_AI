@@ -220,6 +220,9 @@ Browser (React + TypeScript)  ──/api──►  Express API (Node.js, JavaScr
 | 31 | **Remind** sends a phone notification (and email if set up), shows "Raghu sent a reminder" on the staff task card, and the button reads "Reminded" for 5 minutes | Task workflow |
 | 32 | Clicking anywhere on a task row opens the task; "Done today" rows open to show what happened | User feedback |
 | 33 | Admin notifications live in the account menu (dot on the avatar), not a bell squeezed into the sidebar | User feedback |
+| 34 | **Plan with AI ≠ Ask AI.** Ask AI answers questions; Plan with AI plans an event: chat → tick-box job cards → draft plan → Confirm adds a temple event (`bookings.kind = 'event'`) and its tasks, and tells the people assigned | Designs AI2 (07–09) |
+| 35 | Plan with AI is rule-based until the Claude key is added: reads name/people/day/time, picks the smallest free hall that fits (a puja prefers the Mandir), warns on capacity, clashes, closing time and wrong weekday, and copies last time's jobs for a similar event (`services/planService.js`) | Never makes things up |
+| 36 | **Sign-up window (P4):** main switch + which groups + open/close dates (closes by itself), link `/join` and a printable QR code (made in the app, `lib/qr.ts`, no extra package). The join page only offers open groups and says when the next window opens | Designs P1, P4, W3 |
 
 ---
 

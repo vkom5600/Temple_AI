@@ -20,6 +20,7 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import { startClosingCheckJob } from "./jobs/closingCheckJob.js";
 // Phase 3
 import bookingRoutes from "./routes/bookingRoutes.js";
+import planRoutes from "./routes/planRoutes.js";
 import { resourceRouter, ruleRouter } from "./routes/resourceRoutes.js";
 // import calendarRoutes from "./routes/calendarRoutes.js";
 // import aiRoutes from "./routes/aiRoutes.js";
@@ -45,6 +46,7 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/resources", resourceRouter);
 app.use("/api/rules", ruleRouter);
+app.use("/api/plans", planRoutes);
 // app.use("/api/calendar", calendarRoutes);
 // app.use("/api/ai", aiRoutes);
 app.use("/api/audit-logs", auditRoutes);

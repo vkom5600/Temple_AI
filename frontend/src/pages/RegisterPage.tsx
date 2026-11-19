@@ -20,6 +20,9 @@ const JOIN_AS: { role: RegisterInput['role']; label: string; hint: string; icon:
 export default function RegisterPage() {
   const { user } = useAuth()
   const [open, setOpen] = useState<boolean | null>(null)
+  const [roles, setRoles] = useState<RegisterInput['role'][]>(['volunteer', 'staff', 'committee'])
+  const [nextOpens, setNextOpens] = useState<string | null>(null)
+  const [closes, setCloses] = useState<string | null>(null)
   const [form, setForm] = useState<RegisterInput>(BLANK)
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
@@ -28,7 +31,16 @@ export default function RegisterPage() {
   const set = <K extends keyof RegisterInput>(key: K, value: RegisterInput[K]) => setForm((f) => ({ ...f, [key]: value }))
 
   useEffect(() => {
-    authApi.registrationStatus().then((r) => setOpen(r.open)).catch(() => setOpen(true))
+    authApi.registrationStatus().then((r) => {
+      setOpen(r.open)
+      setNextOpens(r.next_opens)
+      setCloses(r.closes)
+      if (r.roles?.length) {
+        setRoles(r.roles)
+        // Start on a group that's actually open (P4: e.g. only volunteers this time)
+        setForm((f) => (r.roles.includes(f.role) ? f : { ...f, role: r.roles[0] }))
+      }
+    }).catch(() => setOpen(true))
   }, [])
 
   if (user) return <Navigate to={homePath(user)} replace />
@@ -59,8 +71,12 @@ export default function RegisterPage() {
       {open === false && (
         <div className="stack center" style={{ paddingTop: 24 }}>
           <span className="tile-ic ic-ind" style={{ margin: '0 auto' }}><Icon name="lock" size={22} /></span>
-          <h1>Sign-ups are closed</h1>
-          <p className="lead" style={{ margin: 0 }}>Registration is closed right now. Please contact the temple office.</p>
+          <h1>Registration closed</h1>
+          <p className="lead" style={{ margin: 0 }}>
+            {nextOpens
+              ? `Sign-ups are closed right now. The next window opens ${new Date(`${nextOpens}T12:00:00`).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}.`
+              : 'Sign-ups are closed right now. Please contact the temple office.'}
+          </p>
           <Link to="/login" className="btn btn-outline btn-big">Back to sign in</Link>
         </div>
       )}
@@ -78,11 +94,11 @@ export default function RegisterPage() {
         <>
           <h1>Join the temple team</h1>
           <p className="lead">Tell us a little about you. The chairman checks every sign-up, and you can sign in once it's approved.</p>
-          <span className="pill pill-grn open-pill"><span className="dot" /> Sign-ups are open</span>
+          <span className="pill pill-grn open-pill"><span className="dot" /> Sign-ups are open{closes ? ` until ${new Date(`${closes}T12:00:00`).toLocaleDateString([], { day: 'numeric', month: 'short' })}` : ''}</span>
           <form className="stack" onSubmit={submit} noValidate>
             <fieldset className="join-as">
               <legend className="label">I'm joining as</legend>
-              {JOIN_AS.map((o) => (
+              {JOIN_AS.filter((o) => roles.includes(o.role)).map((o) => (
                 <label key={o.role} className={`choice ${form.role === o.role ? 'on' : ''}`}>
                   <input type="radio" name="role" value={o.role} checked={form.role === o.role} onChange={() => set('role', o.role)} />
                   <span className="ic"><Icon name={o.icon} size={22} /></span>

@@ -336,3 +336,51 @@ export interface ScheduleItem {
   ends_at: string
   resource_name: string
 }
+
+// ---------- Phase 3: Plan with AI (AI2) ----------
+
+export interface PlanTask {
+  title: string
+  assigned_to: number | null
+  assigned_to_name?: string | null
+  assigned_group: TaskGroup | null
+  due_at: string
+  category: string
+  requires_verification: boolean
+  added?: boolean
+  change?: string | null // plan from last time: what changed ("Updated from 200 to 250 people")
+}
+
+export interface PlanEvent {
+  title: string
+  resource_id: number
+  resource_name: string
+  resource_capacity: number | null
+  starts_at: string
+  ends_at: string
+  guests: number | null
+  kind: string
+}
+
+export interface PlanNote { tone: 'warn' | 'idea'; text: string }
+
+export interface PlanDraft {
+  event: PlanEvent
+  tasks: PlanTask[]
+  notes: PlanNote[]
+  based_on: { id: number; title: string; starts_at: string; tasks: number } | null
+}
+
+// ---------- P4 sign-up window ----------
+
+export type SignupRole = 'volunteer' | 'staff' | 'committee'
+
+export interface SignupWindow {
+  switched_on: boolean
+  open: boolean
+  roles: SignupRole[]
+  opens: string | null
+  closes: string | null
+  next_opens: string | null
+  reason: 'off' | 'no_roles' | 'not_yet' | 'ended' | null
+}

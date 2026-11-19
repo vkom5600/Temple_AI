@@ -3,55 +3,211 @@ import { settingsApi, usersApi } from '../../api/endpoints'
 import { DESIGNATION_LABELS, ROLE_LABELS } from '../../constants'
 import { timeAgo } from '../../lib/format'
 import { useToast } from '../../components/Toast'
-import { ErrorNote, Icon, Modal } from '../../components/ui'
-import type { User } from '../../types'
+import { ErrorNote, Icon, Modal, type IconName } from '../../components/ui'
+import { BRAND } from '../../branding'
+import { qrPath, qrPng } from '../../lib/qr'
+import type { SignupRole, SignupWindow, User } from '../../types'
 
-// P1 with registration + P5 Check new sign-ups (designs: screens/27_P1, 29_P5).
-// The card on People shows whether sign-ups are open and how many are waiting;
-// "Review" opens the side panel with one card per person: Approve or Not now.
+// P1 "Volunteer registration" card + P4 Sign-up window (designs: screens/27_P1, P4_sign-up-window).
+// The chairman opens sign-ups for chosen groups between two dates (they close by
+// themselves), shares the link or a printable QR code, and reviews who signed up.
+
+const ROLE_ROWS: { role: SignupRole; label: string; hint: string; icon: IconName }[] = [
+  { role: 'volunteer', label: 'Volunteers', hint: 'Anyone with the link', icon: 'heart' },
+  { role: 'staff', label: 'Staff', hint: 'Priest, cook, cleaner, caretaker, security', icon: 'badge' },
+  { role: 'committee', label: 'Committee members', hint: 'Only people you invite', icon: 'shield' },
+]
+const ROLE_WORD: Record<SignupRole, string> = { volunteer: 'Volunteer', staff: 'Staff', committee: 'Committee' }
+export const signupLink = () => `${window.location.origin}/join`
+const shortDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString([], { day: 'numeric', month: 'short' })
+const longDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+
+const copyLink = async (toast: (m: string) => void) => {
+  try { await navigator.clipboard.writeText(signupLink()); toast('Sign-up link copied') } catch { toast(signupLink()) }
+}
 
 export function SignupsCard({ pending, onReview }: { pending: User[]; onReview: () => void }) {
   const toast = useToast()
-  const [open, setOpen] = useState<boolean | null>(null)
+  const [win, setWin] = useState<SignupWindow | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [showQr, setShowQr] = useState(false)
 
-  useEffect(() => {
-    settingsApi.list().then((r) => setOpen(Boolean(r.settings.find((s) => s.key === 'registration_open')?.value))).catch(() => {})
-  }, [])
+  const load = () => settingsApi.signupWindow().then((r) => setWin(r.window)).catch(() => {})
+  useEffect(() => { load() }, [])
 
   const toggle = async () => {
+    if (!win) return
     try {
-      const r = await settingsApi.update('registration_open', !open)
-      setOpen(Boolean(r.settings.find((s) => s.key === 'registration_open')?.value))
-      toast(open ? 'Sign-ups closed' : 'Sign-ups open: anyone with the link can register')
+      const roles = win.roles.length ? win.roles : (['volunteer'] as SignupRole[])
+      const r = await settingsApi.saveSignupWindow({ open: !win.switched_on, roles, opens: win.opens, closes: win.closes })
+      setWin(r.window)
+      toast(r.message)
     } catch (err) {
       toast((err as Error).message)
     }
   }
 
+  const who = win?.roles.length ? win.roles.map((r) => ROLE_WORD[r]).join(' and ').replace(/^(\w)/, (c) => c.toUpperCase()) : 'Volunteer'
+  const state = !win ? null
+    : win.open ? { text: 'Open', cls: 'state-open' }
+    : win.reason === 'not_yet' ? { text: `Opens ${shortDay(win.opens!)}`, cls: 'state-soon' }
+    : win.reason === 'ended' ? { text: 'Ended', cls: 'state-closed' }
+    : { text: 'Closed', cls: 'state-closed' }
+  const dates = !win ? '' : win.opens && win.closes ? `Open ${shortDay(win.opens)} – ${shortDay(win.closes)}`
+    : win.closes ? `Open until ${shortDay(win.closes)}` : win.opens ? `From ${shortDay(win.opens)}, no end date` : 'No dates set'
+
   return (
     <section className="list-card reg-card">
-      <div className="grow">
-        <h3>
-          Sign-ups
-          {open !== null && (
-            <button className={`switch ${open ? 'on' : ''}`} role="switch" aria-checked={open} aria-label="Sign-ups open" onClick={toggle}><span className="switch-knob" /></button>
-          )}
-          {open !== null && <span className={open ? 'state-open' : 'state-closed'}>{open ? 'Open' : 'Closed'}</span>}
-        </h3>
-        <div className="muted">New volunteers, staff and committee register at <b>/register</b>. Nobody can sign in until you approve them.</div>
+      <div className="reg-top">
+        <div className="grow">
+          <h3>
+            {who} registration
+            {win && <button className={`switch ${win.switched_on ? 'on' : ''}`} role="switch" aria-checked={win.switched_on} aria-label="Sign-ups on" onClick={toggle}><span className="switch-knob" /></button>}
+            {state && <span className={state.cls}>{state.text}</span>}
+          </h3>
+          <div className="muted">{dates} · <button className="link-btn saf" onClick={() => setEditing(true)}>Edit</button></div>
+        </div>
+        <div className="reg-actions">
+          <button className="btn btn-outline" onClick={() => copyLink(toast)}><Icon name="copy" size={16} /> Copy sign-up link</button>
+          <button className="btn btn-outline" onClick={() => setShowQr(true)}><Icon name="qr" size={16} /> Show QR code</button>
+        </div>
       </div>
-      {pending.length > 0 ? (
-        <>
-          <span className="waiting-line"><span className="dot" /> {pending.length} {pending.length === 1 ? 'person' : 'people'} waiting</span>
-          <button className="btn btn-primary" onClick={onReview}>Review</button>
-        </>
-      ) : (
-        <span className="muted">Nobody waiting</span>
-      )}
+      <div className="reg-bottom">
+        {pending.length > 0 ? (
+          <>
+            <span className="waiting-line"><span className="dot" /> {pending.length} new {pending.length === 1 ? 'person' : 'people'} waiting</span>
+            <button className="link-btn saf" onClick={onReview}>Review <Icon name="arrow-right" size={14} /></button>
+          </>
+        ) : <span className="muted">Nobody waiting to be checked</span>}
+      </div>
+      {editing && win && <SignupWindowDialog win={win} pending={pending.length} onReview={() => { setEditing(false); onReview() }} onClose={() => setEditing(false)} onSaved={(w) => { setWin(w); setEditing(false) }} />}
+      {showQr && <QrDialog onClose={() => setShowQr(false)} />}
     </section>
   )
 }
 
+// P4 Sign-up window
+function SignupWindowDialog({ win, pending, onClose, onSaved, onReview }: { win: SignupWindow; pending: number; onClose: () => void; onSaved: (w: SignupWindow) => void; onReview: () => void }) {
+  const toast = useToast()
+  const [roles, setRoles] = useState<SignupRole[]>(win.roles)
+  const [opens, setOpens] = useState(win.opens ?? '')
+  const [closes, setCloses] = useState(win.closes ?? '')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const qr = qrPath(signupLink())
+
+  const save = async (open: boolean) => {
+    setError('')
+    setBusy(true)
+    try {
+      const r = await settingsApi.saveSignupWindow({ open, roles, opens: opens || null, closes: closes || null })
+      toast(r.message)
+      onSaved(r.window)
+    } catch (err) {
+      setError((err as Error).message)
+      setBusy(false)
+    }
+  }
+  const flip = (role: SignupRole) => setRoles((rs) => (rs.includes(role) ? rs.filter((r) => r !== role) : [...rs, role]))
+
+  return (
+    <Modal
+      title="Sign-up window"
+      subtitle="Let new people sign up from a link or QR code. Nothing happens until you approve them."
+      onClose={onClose}
+      footer={
+        <>
+          {win.switched_on && <button className="link-btn danger" style={{ marginRight: 'auto' }} disabled={busy} onClick={() => save(false)}>Close sign-ups</button>}
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>{busy ? 'Saving…' : win.switched_on ? 'Save' : 'Save and open'}</button>
+        </>
+      }
+    >
+      <div className="stack" style={{ gap: 18 }}>
+        <section className="dsec">
+          <span className="ulabel">Who can sign up</span>
+          {ROLE_ROWS.map((r) => (
+            <div key={r.role} className={`who-row ${roles.includes(r.role) ? 'on' : ''}`}>
+              <span className="tile-ic ic-soft"><Icon name={r.icon} size={18} /></span>
+              <div className="grow"><b>{r.label}</b><span className="muted small">{r.hint}</span></div>
+              <button className={`switch ${roles.includes(r.role) ? 'on' : ''}`} role="switch" aria-checked={roles.includes(r.role)} aria-label={`${r.label} can sign up`} onClick={() => flip(r.role)}><span className="switch-knob" /></button>
+            </div>
+          ))}
+        </section>
+
+        <section className="dsec">
+          <span className="ulabel">When</span>
+          <div className="grid-2f">
+            <label className="field"><span>Opens</span><input type="date" value={opens} onChange={(e) => setOpens(e.target.value)} /></label>
+            <label className="field"><span>Closes</span><input type="date" value={closes} min={opens || undefined} onChange={(e) => setCloses(e.target.value)} /></label>
+          </div>
+          <span className="muted small">{closes ? `Closes by itself after ${longDay(closes)}. Turn it off any time.` : 'No closing date: stays open until you turn it off.'}{opens ? ` Opens ${longDay(opens)}.` : ''}</span>
+        </section>
+
+        <section className="dsec">
+          <span className="ulabel">Share</span>
+          <div className="share-row">
+            <Icon name="link" size={18} />
+            <b className="grow">{signupLink().replace(/^https?:\/\//, '')}</b>
+            <button className="btn btn-outline btn-sm" onClick={() => copyLink(toast)}><Icon name="copy" size={14} /> Copy</button>
+          </div>
+          <div className="share-row qr-row">
+            <svg viewBox={`0 0 ${qr.size} ${qr.size}`} className="qr-mini" role="img" aria-label="QR code for the sign-up link"><rect width={qr.size} height={qr.size} fill="#fff" /><path d={qr.d} fill="#000" /></svg>
+            <div className="grow"><b>Printable QR code</b><span className="muted small">Download it for the notice board</span></div>
+            <button className="btn btn-outline btn-sm" onClick={downloadQr}><Icon name="download" size={14} /> Download</button>
+          </div>
+        </section>
+
+        {pending > 0 && (
+          <div className="waiting-box">
+            <span className="dot" /> <span className="grow"><b>{pending} {pending === 1 ? 'person is' : 'people are'}</b> waiting for you to check them</span>
+            <button className="link-btn saf" onClick={onReview}>Review <Icon name="arrow-right" size={14} /></button>
+          </div>
+        )}
+        <ErrorNote>{error}</ErrorNote>
+      </div>
+    </Modal>
+  )
+}
+
+const downloadQr = () => {
+  const a = document.createElement('a')
+  a.href = qrPng(signupLink())
+  a.download = 'temple-sign-up-qr.png'
+  a.click()
+}
+
+// "Show QR code": big enough to scan from the screen, or print for the notice board.
+function QrDialog({ onClose }: { onClose: () => void }) {
+  const qr = qrPath(signupLink())
+  // While this is open, printing prints just the QR (see .printing-qr in styles.css)
+  useEffect(() => {
+    document.body.classList.add('printing-qr')
+    return () => document.body.classList.remove('printing-qr')
+  }, [])
+  return (
+    <Modal
+      title="Sign-up QR code"
+      subtitle="Scan with a phone camera to open the sign-up page."
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          <button className="btn btn-outline" onClick={() => window.print()}><Icon name="list" size={16} /> Print</button>
+          <button className="btn btn-primary" onClick={downloadQr}><Icon name="download" size={16} /> Download</button>
+        </>
+      }
+    >
+      <div className="qr-big print-area">
+        <svg viewBox={`0 0 ${qr.size} ${qr.size}`} role="img" aria-label="QR code for the sign-up link"><rect width={qr.size} height={qr.size} fill="#fff" /><path d={qr.d} fill="#000" /></svg>
+        <b>{BRAND.templeName}: join the temple team</b>
+        <span className="muted">{signupLink().replace(/^https?:\/\//, '')}</span>
+      </div>
+    </Modal>
+  )
+}
+
+// P5 Check new sign-ups: one card per person, Approve or Not now.
 export function SignupsDrawer({ pending, rejected, onClose, onChange }: { pending: User[]; rejected: User[]; onClose: () => void; onChange: () => void }) {
   const toast = useToast()
   const [busyId, setBusyId] = useState<number | null>(null)

@@ -232,3 +232,49 @@ export async function seedDemoBookings(pool) {
     }
     console.log(`Seeded ${demo.length} demo bookings.`);
 }
+
+// Last year's Diwali celebration, with its jobs done, so Plan with AI can show
+// "plan from last year" (AI2, screens/09) in the demo.
+export async function seedLastYearEvent(pool) {
+    const already = await pool.query("SELECT 1 FROM bookings WHERE title = 'Diwali celebration' AND starts_at < NOW()");
+    if (already.rowCount) return;
+    const tz = process.env.TEMPLE_TIMEZONE || "Europe/London";
+    const hall = (await pool.query("SELECT id FROM resources WHERE name = 'Shivaji Hall'")).rows[0]?.id;
+    const chairman = (await pool.query("SELECT id, full_name FROM users WHERE role = 'chairman' ORDER BY id LIMIT 1")).rows[0];
+    const doer = async (email) => (await pool.query("SELECT id FROM users WHERE email = $1", [email])).rows[0]?.id ?? null;
+    if (!hall || !chairman) return;
+
+    const event = await pool.query(
+        `INSERT INTO bookings (resource_id, kind, title, starts_at, ends_at, guests, contact_name, status, source,
+                               requested_by, rules_agreed, reviewed_by, reviewed_at)
+         VALUES ($1, 'event', 'Diwali celebration',
+                 ((date_trunc('day', NOW() AT TIME ZONE $2) - interval '363 days' + interval '18 hours') AT TIME ZONE $2),
+                 ((date_trunc('day', NOW() AT TIME ZONE $2) - interval '363 days' + interval '22 hours') AT TIME ZONE $2),
+                 200, $3, 'approved', 'desk', $4, '[]', $4, NOW() - interval '370 days')
+         RETURNING id, starts_at, ends_at`,
+        [hall, tz, chairman.full_name, chairman.id]
+    );
+    const { id, starts_at: start, ends_at: end } = event.rows[0];
+    const at = (base, minutes) => new Date(new Date(base).getTime() + minutes * 60_000);
+    // [title, group, due, category, safety, done by]
+    const jobs = [
+        ["Tell devotees about the Diwali celebration", "committee", at(start, -7 * 24 * 60), "Admin & committee", false, "meena@temple.demo"],
+        ["Decorate Shivaji Hall (rangoli, diyas, flowers)", "volunteer", at(start, -180), "Events & bookings", false, "priya@temple.demo"],
+        ["Prepare prasad for 200 people", "cook", at(start, -120), "Kitchen", false, "kamla@temple.demo"],
+        ["Clean and prepare Shivaji Hall", "cleaner", at(start, -60), "Cleaning", false, "ramesh@temple.demo"],
+        ["Lakshmi puja and aarti", "priest", at(start, 30), "Puja & rituals", false, "anil@temple.demo"],
+        ["Fireworks safety perimeter", "security", at(start, 150), "Security & closing", true, "dev@temple.demo"],
+        ["Clean-up and recycling", "volunteer", at(end, 30), "Cleaning", false, "vikram@temple.demo"],
+        ["Check Shivaji Hall and lock up", "security", at(end, 15), "Security & closing", true, "dev@temple.demo"]
+    ];
+    for (const [title, group, due, category, safety, email] of jobs) {
+        const by = await doer(email);
+        await pool.query(
+            `INSERT INTO tasks (title, category, area, assigned_group, priority, requires_verification, due_at, recurrence,
+                                created_by, status, completed_by, completed_at, verified_by, verified_at, booking_id)
+             VALUES ($1, $2, 'Shivaji Hall', $3, 'normal', $4, $5, 'none', $6, 'done', $7, $5, $8, $9, $10)`,
+            [title, category, group, safety, due, chairman.id, by, safety ? chairman.id : null, safety ? due : null, id]
+        );
+    }
+    console.log("Seeded last year's Diwali celebration (for Plan with AI).");
+}

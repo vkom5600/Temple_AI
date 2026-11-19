@@ -4,7 +4,7 @@ import pool from "../config/db.js";
 import { logAudit } from "../services/auditService.js";
 import { notify } from "../services/notificationService.js";
 import { sendEmail, chairmanEmails } from "../services/emailService.js";
-import { getSetting } from "../services/settingsService.js";
+import { getSetting, getSignupWindow } from "../services/settingsService.js";
 import * as emails from "../services/emailTemplates.js";
 import { validateUserBody } from "../utils/userValidation.js";
 
@@ -28,19 +28,24 @@ const inBackground = (task) => {
 
 // GET /api/auth/registration-status  (public)
 export const registrationStatus = async (req, res) => {
-    res.json({
-        success: true,
-        open: await getSetting("registration_open", true)
-    });
+    const w = await getSignupWindow();
+    res.json({ success: true, open: w.open, roles: w.open ? w.roles : [], next_opens: w.next_opens, closes: w.open ? w.closes : null });
 };
 
 // POST /api/auth/register  (public)
 // Creates a pending account; the chairman approves or rejects it.
 export const register = async (req, res) => {
-    if (!(await getSetting("registration_open", true))) {
+    const signupWindow = await getSignupWindow();
+    if (!signupWindow.open) {
         return res.status(403).json({
             success: false,
             message: "Registration is closed at the moment. Please contact the temple office."
+        });
+    }
+    if (!signupWindow.roles.includes(req.body?.role)) {
+        return res.status(403).json({
+            success: false,
+            message: "Sign-ups for that group aren't open right now. Please contact the temple office."
         });
     }
 

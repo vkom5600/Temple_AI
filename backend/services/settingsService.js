@@ -4,6 +4,9 @@ import pool from "../config/db.js";
 // Only keys listed here can be read or changed through the API.
 export const SETTING_KEYS = {
   registration_open: { type: "boolean", label: "Allow new people to register" },
+  registration_roles: { type: "roles", label: "Who can sign up" },
+  registration_opens: { type: "date", label: "Sign-ups open on" },
+  registration_closes: { type: "date", label: "Sign-ups close after" },
   login_alert_to_chairman: { type: "boolean", label: "Email the chairman when someone signs in" },
   closing_time: { type: "time", label: "Evening closing check" }
 };
@@ -44,4 +47,35 @@ export const setSetting = async (key, value, updatedBy) => {
          updated_by = EXCLUDED.updated_by`,
     [key, String(value), updatedBy]
   );
+};
+
+// ---------------------------------------------------------------- P4 sign-up window
+
+export const SIGNUP_ROLES = ["volunteer", "staff", "committee"];
+
+const templeToday = () => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: process.env.TEMPLE_TIMEZONE || "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(new Date()).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+};
+
+// The window as people see it: open only if switched on, today is within the
+// dates (closes by itself), and at least one group may sign up.
+export const getSignupWindow = async () => {
+  const on = await getSetting("registration_open", true);
+  const roles = String(await getSetting("registration_roles", "volunteer,staff") ?? "").split(",").filter((r) => SIGNUP_ROLES.includes(r));
+  const opens = (await getSetting("registration_opens", "")) || null;
+  const closes = (await getSetting("registration_closes", "")) || null;
+  const today = templeToday();
+  const notYet = !!opens && today < opens;
+  const ended = !!closes && today > closes;
+  return {
+    switched_on: on,
+    open: on && roles.length > 0 && !notYet && !ended,
+    roles,
+    opens,
+    closes,
+    next_opens: on && notYet ? opens : null,
+    reason: !on ? "off" : !roles.length ? "no_roles" : notYet ? "not_yet" : ended ? "ended" : null
+  };
 };

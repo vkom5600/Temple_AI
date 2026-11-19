@@ -39,13 +39,21 @@ const ALL = ['desktop', 'tablet', 'phone']
 // Click helpers that run in the page.
 const clickText = (text) => `[...document.querySelectorAll('button, a')].find((b) => b.textContent.trim().includes(${JSON.stringify(text)}))?.click()`
 const clickSel = (sel) => `document.querySelector(${JSON.stringify(sel)})?.click()`
+// Open Plan with AI and send one message (steps, so other steps can follow)
+const wait = (ms) => `await new Promise((r) => setTimeout(r, ${ms}))`
+const planSteps = (text) => `${clickText('Plan with AI')}; ${wait(600)}; const i = document.querySelector('.plan-ask input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(text)}); i.dispatchEvent(new Event('input', { bubbles: true })); ${wait(100)}; document.querySelector('.plan-send').click(); ${wait(1500)}`
+const planChat = (text) => `(async () => { ${planSteps(text)} })()`
 
 // [name, path, account, viewports, action to open a popup]
 const PAGES = [
   ['sign in', '/login', null, ALL],
   ['join', '/register', null, ALL],
+  ['join (short link)', '/join', null, ['phone']],
   ['home', '/admin', 'raghu', ALL],
   ['home: broadcast', '/admin', 'raghu', ['desktop', 'tablet'], clickText('Broadcast')],
+  ['home: plan with AI', '/admin', 'raghu', ['desktop', 'tablet'], planChat('Navratri garba night, 300 people, Sat 12 Dec')],
+  ['home: plan with AI draft', '/admin', 'raghu', ['desktop', 'tablet'], `(async () => { ${planSteps('Navratri garba night, 300 people, Sat 12 Dec')}; for (const b of document.querySelectorAll('.suggest-acts .btn-saf')) b.click(); ${wait(300)}; ${clickSel('.plan-bar')}; ${wait(400)}; if (!document.querySelector('.plan-tile')) throw new Error('draft plan did not open') })()`],
+  ['home: plan from last time', '/admin', 'raghu', ['desktop', 'tablet'], `(async () => { ${planSteps('Diwali celebration, 250 people, Mon 1 Nov 2027')}; ${clickText("See last time's plan")}; ${wait(300)}; if (!document.querySelector('.ly-card')) throw new Error('last time plan did not open') })()`],
   ['home: ask AI', '/admin', 'raghu', ['desktop', 'tablet'], clickSel('.ask-ai')],
   ['action center', '/admin/action-center', 'raghu', ALL],
   ['action center: booking review', '/admin/action-center', 'raghu', ['desktop', 'tablet'], clickSel('.attn-row .tile-ic.ic-ind ~ .grow .attn-name button')],
@@ -63,6 +71,8 @@ const PAGES = [
   ['people: person', '/admin/people', 'raghu', ['desktop', 'tablet'], clickSel('tr.prow')],
   ['people: person menu', '/admin/people', 'raghu', ['desktop', 'phone'], `(async () => { ${clickSel('tr.prow')}; await new Promise((r) => setTimeout(r, 500)); ${clickSel('.kebab .icon-btn')} })()`],
   ['people: remove person', '/admin/people', 'raghu', ['desktop', 'phone'], `(async () => { ${clickSel('tr.prow')}; await new Promise((r) => setTimeout(r, 500)); ${clickSel('.kebab .icon-btn')}; await new Promise((r) => setTimeout(r, 500)); ${clickText('Remove person')} })()`],
+  ['people: sign-up window', '/admin/people', 'raghu', ['desktop', 'tablet', 'phone'], clickSel('.reg-card .link-btn')],
+  ['people: sign-up QR code', '/admin/people', 'raghu', ['desktop', 'phone'], clickText('Show QR code')],
   ['people: sign-ups', '/admin/people?review=signups', 'raghu', ALL],
   ['reports', '/admin/reports', 'raghu', ALL],
   ['reports: activity log', '/admin/reports', 'raghu', ['desktop', 'tablet'], clickText('Activity log')],
@@ -200,7 +210,11 @@ async function main() {
       await send('Runtime.evaluate', { expression: account ? `localStorage.setItem('temple_ai_token', ${JSON.stringify(tokens[account])})` : 'localStorage.clear()' })
       await send('Page.navigate', { url: BASE + path })
       await sleep(2200)
-      if (action) { await send('Runtime.evaluate', { expression: action, awaitPromise: true }); await sleep(1500) }
+      if (action) {
+        const r = await send('Runtime.evaluate', { expression: action, awaitPromise: true })
+        if (r.result?.exceptionDetails) pageErrors.push(`couldn't open the popup: ${r.result.exceptionDetails.exception?.description?.split('\n')[0] ?? r.result.exceptionDetails.text}`)
+        await sleep(1500)
+      }
       const result = await send('Runtime.evaluate', { expression: CHECK, returnByValue: true })
       const problems = [...(result.result?.result?.value ?? ['(check failed to run)']), ...pageErrors.map((e) => `page error: ${e}`)]
       checked++

@@ -19,7 +19,7 @@ const isAdmin = (user) => ADMIN_ROLES.includes(user.role);
 const text = (v, max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
 // Check and tidy a booking from the request body. Returns { data } or { error }.
-const validateBooking = async (body, user) => {
+export const validateBooking = async (body, user) => {
     const resourceId = parseId(body.resource_id);
     if (!resourceId) return { error: "Choose a hall or room" };
     const resource = (await pool.query("SELECT * FROM resources WHERE id = $1 AND is_active", [resourceId])).rows[0];

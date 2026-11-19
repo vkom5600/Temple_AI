@@ -25,7 +25,7 @@ const SHOW_MAX = 4
 export default function AdminHome() {
   const { user } = useAuth()
   const toast = useToast()
-  const { summary, refreshSummary, openBroadcast, openAskAi } = useAdminContext()
+  const { summary, refreshSummary, openBroadcast, openPlan } = useAdminContext()
   const isChairman = user?.role === 'chairman'
   const { inbox, error, reload } = useInbox(isChairman)
   const [today, setToday] = useState<Task[] | null>(null)
@@ -85,7 +85,7 @@ export default function AdminHome() {
           )}
         </div>
         <div className="head-actions">
-          <button className="btn btn-primary btn-lg" onClick={openAskAi}><span className="star">✦</span> Plan with AI</button>
+          <button className="btn btn-primary btn-lg" onClick={openPlan}><span className="star">✦</span> Plan with AI</button>
           <button className="btn btn-outline btn-lg" onClick={openBroadcast}><Icon name="send" size={17} /> Broadcast</button>
         </div>
       </header>

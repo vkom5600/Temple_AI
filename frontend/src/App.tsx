@@ -31,6 +31,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/join" element={<RegisterPage />} />
 
             <Route path="/admin" element={<RequireRole roles={['chairman', 'committee']}><AdminLayout /></RequireRole>}>
               <Route index element={<AdminHome />} />

@@ -6,6 +6,7 @@ import { BRAND } from '../branding'
 import { ROLE_LABELS } from '../constants'
 import { NotificationsPanel, useUnreadCount } from '../components/NotificationBell'
 import AskAiPanel from '../components/AskAiPanel'
+import PlanWithAiPanel from '../components/PlanWithAiPanel'
 import BroadcastDialog from '../components/BroadcastDialog'
 import { Avatar, Icon, type IconName } from '../components/ui'
 import { Gopuram } from '../components/Ornaments'
@@ -13,12 +14,13 @@ import PhoneNeedsYou from '../pages/admin/PhoneNeedsYou'
 import type { TaskSummary } from '../types'
 
 // Shared with admin pages through <Outlet context>: today's numbers, a refresh,
-// and the two panels every page can open (H3 Broadcast, AI1 Ask AI).
+// and the panels pages can open (H3 Broadcast, AI1 Ask AI, AI2 Plan with AI).
 interface AdminContext {
   summary: TaskSummary | null
   refreshSummary: () => void
   openBroadcast: () => void
   openAskAi: () => void
+  openPlan: () => void
 }
 export const useAdminContext = () => useOutletContext<AdminContext>()
 
@@ -60,6 +62,7 @@ export default function AdminLayout() {
   const [menu, setMenu] = useState(false)
   const [asking, setAsking] = useState(false)
   const [broadcasting, setBroadcasting] = useState(false)
+  const [planning, setPlanning] = useState(false)
   const [notes, setNotes] = useState(false)
   const { unread, refresh: refreshUnread } = useUnreadCount()
   const menuRef = useRef<HTMLDivElement>(null)
@@ -93,11 +96,12 @@ export default function AdminLayout() {
   if (!user) return null
   const isChairman = user.role === 'chairman'
   const waiting = actionCount(summary, isChairman)
-  const context: AdminContext = { summary, refreshSummary, openBroadcast: () => setBroadcasting(true), openAskAi: () => setAsking(true) }
+  const context: AdminContext = { summary, refreshSummary, openBroadcast: () => setBroadcasting(true), openAskAi: () => setAsking(true), openPlan: () => setPlanning(true) }
   const panels = (
     <>
       {asking && <AskAiPanel onClose={() => setAsking(false)} />}
       {broadcasting && <BroadcastDialog onClose={() => setBroadcasting(false)} />}
+      {planning && <PlanWithAiPanel onClose={() => setPlanning(false)} onConfirmed={refreshSummary} />}
       {notes && <NotificationsPanel onClose={() => { setNotes(false); refreshUnread() }} />}
     </>
   )
