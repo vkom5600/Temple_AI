@@ -15,8 +15,8 @@ const DEMO_USERS = [
     { full_name: "Priya",  email: "priya@temple.demo",  role: "volunteer", phone: "+44 7700 900011" },
     { full_name: "Vikram", email: "vikram@temple.demo", role: "volunteer", phone: "+44 7700 900012" },
     // Self-registered, waiting for the chairman (shows the approval queue)
-    { full_name: "Anita",  email: "anita@temple.demo",  role: "volunteer", phone: "+44 7700 900013", approval_status: "pending" },
-    { full_name: "Mohan",  email: "mohan@temple.demo",  role: "staff", designation: "cook", phone: "+44 7700 900014", approval_status: "pending" }
+    { full_name: "Anita",  email: "anita@temple.demo",  role: "volunteer", phone: "+44 7700 900013", approval_status: "pending", signup_details: { availability: ["weekends", "festivals"], help: ["kitchen", "parking"] } },
+    { full_name: "Mohan",  email: "mohan@temple.demo",  role: "staff", designation: "cook", phone: "+44 7700 900014", approval_status: "pending", signup_details: { availability: ["weekday_mornings"], help: [] } }
 ];
 
 export async function seedDemoData(pool) {
@@ -31,12 +31,13 @@ export async function seedDemoData(pool) {
 
     for (const person of DEMO_USERS) {
         const result = await pool.query(
-            `INSERT INTO users (full_name, email, password_hash, role, phone, approval_status)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO users (full_name, email, password_hash, role, phone, approval_status, signup_details)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT (email) DO NOTHING
              RETURNING id`,
             [person.full_name, person.email, passwordHash, person.role, person.phone,
-             person.approval_status ?? "approved"]
+             person.approval_status ?? "approved",
+             person.signup_details ? JSON.stringify({ ...person.signup_details, rules_agreed_at: new Date().toISOString() }) : null]
         );
 
         if (result.rowCount === 0) continue;

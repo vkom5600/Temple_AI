@@ -167,6 +167,17 @@ describe("people", () => {
         assert.equal(staff.status, 403);
         await put("/settings/signup-window", "raghu", { open: true, roles: ["volunteer", "staff"], opens: null, closes: null });
     });
+    test("sign-up form: mobile and the Temple Rules are required; answers are saved", async () => {
+        const base = { full_name: "Test Signup", email: `su${Date.now()}@example.com`, password: "Testpass123", role: "volunteer", designation: "" };
+        assert.equal((await post("/auth/register", null, { ...base, phone: "", agree_rules: true })).status, 400, "mobile required");
+        assert.equal((await post("/auth/register", null, { ...base, phone: "+44 7700 900999" })).status, 400, "rules required");
+        const ok = await post("/auth/register", null, { ...base, phone: "+44 7700 900999", agree_rules: true, availability: ["weekends", "made_up"], help: ["kitchen"] });
+        assert.equal(ok.status, 201);
+        const saved = (await get("/users", "raghu")).body.users.find((u) => u.email === base.email);
+        assert.deepEqual(saved.signup_details.availability, ["weekends"], "unknown choices dropped");
+        assert.deepEqual(saved.signup_details.help, ["kitchen"]);
+        assert.ok((await get("/auth/temple-rules", null)).body.rules.length > 0, "rules readable before signing up");
+    });
 });
 
 describe("committee access per area", () => {

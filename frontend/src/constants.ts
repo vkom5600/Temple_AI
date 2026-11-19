@@ -1,4 +1,4 @@
-import type { AuthUser, Designation, Priority, Role, TaskGroup } from './types'
+import type { AuthUser, Designation, Priority, Role, TaskGroup, SignupAvailability, SignupHelp } from './types'
 
 export const ROLE_LABELS: Record<Role, string> = {
   chairman: 'Chairman',
@@ -65,3 +65,11 @@ export const TASK_TEMPLATES: {
   { title: 'Deep clean the hall', group: 'cleaner', area: 'Shivaji Hall', category: 'Cleaning', safety: false, recurrence: 'none', priority: 'normal' },
   { title: 'Check fire extinguishers', group: 'maintenance', area: 'Whole compound', category: 'Maintenance', safety: true, recurrence: 'weekly', priority: 'normal' },
 ]
+
+// W2 sign-up form choices
+export const AVAILABILITY_LABELS: Record<SignupAvailability, string> = {
+  weekday_mornings: 'Weekday mornings', weekday_evenings: 'Weekday evenings', weekends: 'Weekends', festivals: 'Festivals',
+}
+export const HELP_LABELS: Record<SignupHelp, string> = {
+  kitchen: 'Kitchen', cleaning: 'Cleaning', setting_up: 'Setting up', parking: 'Parking and doors', puja: 'Puja help', anything: 'Anywhere',
+}

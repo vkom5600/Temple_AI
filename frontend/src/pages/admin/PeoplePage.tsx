@@ -8,7 +8,7 @@ import { fmtTime, toDateInput } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Avatar, Badge, ErrorNote, Icon, Modal, Spinner } from '../../components/ui'
 import type { AttendanceDay, Designation, PresenceRow, Role, Task, User, UserInput, Access } from '../../types'
-import { SignupsCard, SignupsDrawer } from './Registrations'
+import { SignupAnswers, SignupsCard, SignupsDrawer } from './Registrations'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import { AREA_INFO, DEFAULT_ACCESS, allowed, can } from '../../lib/access'
 import ViewOnly from '../../components/ViewOnly'
@@ -319,7 +319,7 @@ function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }:
           </div>
         </div>
       )}
-      {!editMode && person ? <PersonFacts person={person} /> : <div className="filled stack" style={{ gap: 16 }}>
+      {!editMode && person ? <><PersonFacts person={person} /><SignupAnswers details={person.signup_details} /></> : <div className="filled stack" style={{ gap: 16 }}>
         <div className="grid-2f">
           <label className="field">
             <span className="ulabel">Full name</span>

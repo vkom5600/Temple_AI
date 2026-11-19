@@ -57,6 +57,16 @@ export const register = async (req, res) => {
         return res.status(400).json({ success: false, message: error });
     }
 
+    // W2: mobile number, availability, how they'd like to help, and the Temple Rules
+    if (!data.phone) return res.status(400).json({ success: false, message: "Add your mobile number" });
+    if (req.body?.agree_rules !== true) return res.status(400).json({ success: false, message: "Please agree to follow the Temple Rules" });
+    const pickFrom = (list, allowed) => (Array.isArray(list) ? [...new Set(list.filter((x) => allowed.includes(x)))] : []);
+    const signupDetails = {
+        availability: pickFrom(req.body?.availability, SIGNUP_AVAILABILITY),
+        help: data.role === "volunteer" ? pickFrom(req.body?.help, SIGNUP_HELP) : [],
+        rules_agreed_at: new Date().toISOString()
+    };
+
     const passwordHash = await bcrypt.hash(data.password, 12);
     const client = await pool.connect();
     let user;
@@ -66,10 +76,10 @@ export const register = async (req, res) => {
 
         const inserted = await client.query(
             `INSERT INTO users
-                (full_name, email, password_hash, role, phone, approval_status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')
+                (full_name, email, password_hash, role, phone, approval_status, signup_details)
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6)
              RETURNING id, full_name, email, role, phone`,
-            [data.full_name, data.email, passwordHash, data.role, data.phone]
+            [data.full_name, data.email, passwordHash, data.role, data.phone, JSON.stringify(signupDetails)]
         );
         user = { ...inserted.rows[0], designation: data.designation };
 
@@ -215,4 +225,14 @@ export const getProfile = async (req, res) => {
         success: true,
         user: publicUser(req.user)
     });
+};
+
+// The choices on the sign-up form (W2). Labels live in the frontend.
+export const SIGNUP_AVAILABILITY = ["weekday_mornings", "weekday_evenings", "weekends", "festivals"];
+export const SIGNUP_HELP = ["kitchen", "cleaning", "setting_up", "parking", "puja", "anything"];
+
+// GET /api/auth/temple-rules  (public) the rules people agree to on the sign-up form
+export const templeRules = async (req, res) => {
+    const rules = await pool.query("SELECT text, category FROM temple_rules WHERE is_active ORDER BY category, sort_order, id");
+    res.json({ success: true, rules: rules.rows });
 };

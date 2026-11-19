@@ -10,7 +10,7 @@ import { effectiveAccess, validateAccess } from "../middleware/access.js";
 const USER_COLUMNS = `
     u.id, u.full_name, u.email, u.role, u.phone, u.is_active,
     u.approval_status, u.reviewed_at, u.rejection_reason, u.created_at,
-    sp.designation, sp.emergency_contact, sp.joining_date, u.access
+    sp.designation, sp.emergency_contact, sp.joining_date, u.access, u.signup_details
 `;
 
 const findUser = async (id, db = pool) => {

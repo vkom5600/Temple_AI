@@ -35,6 +35,7 @@ export interface User extends AuthUser {
   created_at: string
   emergency_contact: string | null
   joining_date: string | null
+  signup_details?: SignupDetails | null
 }
 
 export interface UserInput {
@@ -64,7 +65,15 @@ export interface RegisterInput {
   password: string
   role: Exclude<Role, 'chairman'>
   designation: Designation | ''
+  availability?: SignupAvailability[]
+  help?: SignupHelp[]
+  agree_rules?: boolean
 }
+
+// W2 sign-up answers (shown in the P5 review and on P2)
+export type SignupAvailability = 'weekday_mornings' | 'weekday_evenings' | 'weekends' | 'festivals'
+export type SignupHelp = 'kitchen' | 'cleaning' | 'setting_up' | 'parking' | 'puja' | 'anything'
+export interface SignupDetails { availability: SignupAvailability[]; help: SignupHelp[]; rules_agreed_at?: string }
 
 export interface Setting {
   key: 'registration_open' | 'login_alert_to_chairman' | 'closing_time' | 'auto_reminders' | 'nightly_report'

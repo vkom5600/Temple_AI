@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { settingsApi, usersApi } from '../../api/endpoints'
-import { DESIGNATION_LABELS, ROLE_LABELS } from '../../constants'
+import { AVAILABILITY_LABELS, DESIGNATION_LABELS, HELP_LABELS, ROLE_LABELS } from '../../constants'
 import { timeAgo } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { ErrorNote, Icon, Modal, type IconName } from '../../components/ui'
 import { BRAND } from '../../branding'
 import { qrPath, qrPng } from '../../lib/qr'
-import type { SignupRole, SignupWindow, User } from '../../types'
+import type { SignupRole, SignupWindow, User, SignupDetails } from '../../types'
 
 // P1 "Volunteer registration" card + P4 Sign-up window (designs: screens/27_P1, P4_sign-up-window).
 // The chairman opens sign-ups for chosen groups between two dates (they close by
@@ -265,8 +265,9 @@ export function SignupsDrawer({ pending, rejected, onClose, onChange }: { pendin
               <span className="saf-chip"><Icon name={u.role === 'volunteer' ? 'heart' : u.role === 'staff' ? 'badge' : 'users'} size={14} /> {ROLE_LABELS[u.role]}</span>
               {u.designation && <span className="saf-chip">{DESIGNATION_LABELS[u.designation]}</span>}
             </div>
+            <SignupAnswers details={u.signup_details} />
             {u.role === 'committee' && (
-              <div className="quote"><b><Icon name="alert" size={16} /> Committee access</b><p>Only approve if you asked them to join. Committee members can see and manage everything.</p></div>
+              <div className="quote"><b><Icon name="alert" size={16} /> Committee access</b><p>Only approve if you asked them to join. Then set what they can see and do in their details (People → their name).</p></div>
             )}
             <div className="signup-actions">
               <button className="btn btn-saf" disabled={busyId === u.id} onClick={() => approve(u)}><Icon name="check-circle" /> {busyId === u.id ? 'Approving…' : 'Approve'}</button>
@@ -334,5 +335,17 @@ export function RejectDialog({ person, onClose, onDone }: { person: User; onClos
       </label>
       <ErrorNote>{error}</ErrorNote>
     </Modal>
+  )
+}
+
+// The sign-up form's answers (W2) as the committee sees them (P5, P2)
+export function SignupAnswers({ details }: { details?: SignupDetails | null }) {
+  if (!details || (!details.availability?.length && !details.help?.length)) return null
+  return (
+    <dl className="signup-answers">
+      {details.availability?.length > 0 && <><dt>Available</dt><dd>{details.availability.map((k) => AVAILABILITY_LABELS[k]).join(', ')}</dd></>}
+      {details.help?.length > 0 && <><dt>Areas</dt><dd>{details.help.map((k) => HELP_LABELS[k]).join(', ')}</dd></>}
+      {details.rules_agreed_at && <><dt>Rules</dt><dd>Agreed {new Date(details.rules_agreed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</dd></>}
+    </dl>
   )
 }

@@ -2,12 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { authApi } from '../api/endpoints'
-import { DESIGNATION_LABELS, homePath } from '../constants'
-import { ErrorNote, Icon, Spinner, type IconName } from '../components/ui'
+import { AVAILABILITY_LABELS, DESIGNATION_LABELS, HELP_LABELS, homePath } from '../constants'
+import { ErrorNote, Icon, Modal, Spinner, type IconName } from '../components/ui'
 import EntryShell from '../components/EntryShell'
-import type { Designation, RegisterInput } from '../types'
+import type { Designation, RegisterInput, SignupAvailability, SignupHelp } from '../types'
 
-const BLANK: RegisterInput = { full_name: '', email: '', phone: '', password: '', role: 'volunteer', designation: '' }
+const BLANK: RegisterInput = { full_name: '', email: '', phone: '', password: '', role: 'volunteer', designation: '', availability: [], help: [], agree_rules: false }
+const toggle = <T,>(list: T[] | undefined, item: T): T[] => (list ?? []).includes(item) ? (list ?? []).filter((x) => x !== item) : [...(list ?? []), item]
 
 const JOIN_AS: { role: RegisterInput['role']; label: string; hint: string; icon: IconName }[] = [
   { role: 'volunteer', label: 'Volunteer', hint: 'Help at festivals, events and daily seva', icon: 'heart' },
@@ -28,6 +29,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
+  const [showRules, setShowRules] = useState(false)
   const set = <K extends keyof RegisterInput>(key: K, value: RegisterInput[K]) => setForm((f) => ({ ...f, [key]: value }))
 
   useEffect(() => {
@@ -47,8 +49,8 @@ export default function RegisterPage() {
 
   const mismatch = confirm !== '' && confirm !== form.password
   const canSubmit =
-    form.full_name.trim() && form.email.trim() && form.password.length >= 8 &&
-    confirm === form.password && (form.role !== 'staff' || form.designation) && !busy
+    form.full_name.trim() && form.phone.trim() && form.email.trim() && form.password.length >= 8 &&
+    confirm === form.password && (form.role !== 'staff' || form.designation) && form.agree_rules && !busy
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -93,8 +95,8 @@ export default function RegisterPage() {
       {open && !done && (
         <>
           <h1>Join the temple team</h1>
-          <p className="lead">Tell us a little about you. The chairman checks every sign-up, and you can sign in once it's approved.</p>
-          <span className="pill pill-grn open-pill"><span className="dot" /> Sign-ups are open{closes ? ` until ${new Date(`${closes}T12:00:00`).toLocaleDateString([], { day: 'numeric', month: 'short' })}` : ''}</span>
+          <span className="pill pill-grn open-pill"><span className="dot" /> Sign-ups open{closes ? ` until ${new Date(`${closes}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}</span>
+          <p className="lead">Tell us a little about you. The committee checks every sign-up, and you can sign in once it's approved.</p>
           <form className="stack" onSubmit={submit} noValidate>
             <fieldset className="join-as">
               <legend className="label">I'm joining as</legend>
@@ -118,37 +120,94 @@ export default function RegisterPage() {
               </label>
             )}
 
-            <label className="field">
-              <span className="label">Full name</span>
-              <span className="ifield"><Icon name="user" /><input autoComplete="name" value={form.full_name} onChange={(e) => set('full_name', e.target.value)} /></span>
-            </label>
-            <label className="field">
-              <span className="label">Mobile phone <span className="muted">(optional)</span></span>
-              <span className="ifield"><Icon name="phone" /><input type="tel" autoComplete="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+44 7…" /></span>
-            </label>
-            <label className="field">
-              <span className="label">Email <span className="muted">(you'll sign in with this)</span></span>
-              <span className="ifield"><Icon name="mail" /><input type="email" autoComplete="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="name@example.com" /></span>
-            </label>
-            <label className="field">
-              <span className="label">Password <span className="muted">(8+ characters)</span></span>
-              <span className="ifield"><Icon name="key" /><input type="password" autoComplete="new-password" value={form.password} onChange={(e) => set('password', e.target.value)} /></span>
-            </label>
-            <label className="field">
-              <span className="label">Confirm password</span>
-              <span className="ifield"><Icon name="key" /><input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></span>
+            <section className="jcard">
+              <h2><Icon name="user" size={17} /> Your contact details</h2>
+              <label className="field">
+                <span className="label">Full name <i className="req">*</i></span>
+                <input autoComplete="name" value={form.full_name} onChange={(e) => set('full_name', e.target.value)} placeholder="e.g. Priyesh Patel" />
+              </label>
+              <label className="field">
+                <span className="label">Mobile phone <i className="req">*</i></span>
+                <span className="ifield"><Icon name="phone" /><input type="tel" autoComplete="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+44 7700 900456" /></span>
+              </label>
+              <label className="field">
+                <span className="label">Email <span className="muted">(you'll sign in with this)</span></span>
+                <span className="ifield"><Icon name="mail" /><input type="email" autoComplete="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="e.g. priyesh@example.co.uk" /></span>
+              </label>
+              <div className="grid-2f">
+                <label className="field">
+                  <span className="label">Password <span className="muted">(8+)</span></span>
+                  <span className="ifield"><Icon name="key" /><input type="password" autoComplete="new-password" value={form.password} onChange={(e) => set('password', e.target.value)} /></span>
+                </label>
+                <label className="field">
+                  <span className="label">Confirm</span>
+                  <span className="ifield"><Icon name="key" /><input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></span>
+                </label>
+              </div>
               {mismatch && <span className="red small">Passwords don't match.</span>}
-            </label>
+            </section>
+
+            <section className="jcard">
+              <h2><Icon name="calendar" size={17} /> When can you come?</h2>
+              <div className="jchips" role="group" aria-label="When can you come?">
+                {(Object.keys(AVAILABILITY_LABELS) as SignupAvailability[]).map((k) => (
+                  <button key={k} type="button" className={`jchip ${form.availability?.includes(k) ? 'on' : ''}`} aria-pressed={!!form.availability?.includes(k)} onClick={() => setForm((f) => ({ ...f, availability: toggle(f.availability, k) }))}>
+                    {form.availability?.includes(k) && <Icon name="check" size={14} />} {AVAILABILITY_LABELS[k]}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {form.role === 'volunteer' && (
+              <section className="jcard">
+                <h2><Icon name="heart" size={17} /> How would you like to help?</h2>
+                <div className="jchips" role="group" aria-label="How would you like to help?">
+                  {(Object.keys(HELP_LABELS) as SignupHelp[]).map((k) => (
+                    <button key={k} type="button" className={`jchip ${form.help?.includes(k) ? 'on' : ''}`} aria-pressed={!!form.help?.includes(k)} onClick={() => setForm((f) => ({ ...f, help: toggle(f.help, k) }))}>
+                      {form.help?.includes(k) && <Icon name="check" size={14} />} {HELP_LABELS[k]}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="jcard jrules">
+              <label className="pcheck">
+                <input type="checkbox" checked={!!form.agree_rules} onChange={(e) => set('agree_rules', e.target.checked)} />
+                <span className="box" aria-hidden="true"><Icon name="check" size={14} /></span>
+                <span><b>I'll follow the <button type="button" className="link-btn saf" onClick={(e) => { e.preventDefault(); setShowRules(true) }}>Temple Rules</button></b>
+                  <span className="muted small" style={{ display: 'block' }}>{form.role === 'volunteer' ? 'Volunteers have a short safety talk on their first visit.' : 'The committee goes through them with you when you start.'}</span></span>
+              </label>
+            </section>
 
             <ErrorNote>{error}</ErrorNote>
             <button className="btn btn-primary btn-big" disabled={!canSubmit}>
-              {busy ? 'Sending…' : 'Send my details'}
+              {busy ? 'Sending…' : <>Send my details <Icon name="arrow-right" size={18} /></>}
             </button>
           </form>
-          <p className="fine">We only use your details to contact you about the temple.</p>
+          <p className="fine"><Icon name="lock" size={13} /> We only use your number and email to contact you about the temple.</p>
           <p className="fine">Already have an account? <Link to="/login">Sign in</Link></p>
         </>
       )}
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </EntryShell>
+  )
+}
+
+// The Temple Rules, readable before agreeing (public list)
+function RulesModal({ onClose }: { onClose: () => void }) {
+  const [rules, setRules] = useState<{ text: string; category: string }[] | null>(null)
+  useEffect(() => { authApi.templeRules().then((r) => setRules(r.rules)).catch(() => setRules([])) }, [])
+  const groups = [...new Set((rules ?? []).map((r) => r.category))]
+  let n = 0
+  return (
+    <Modal title="Temple Rules" subtitle="Everyone who helps at the temple follows these." onClose={onClose} footer={<button className="btn btn-primary" onClick={onClose}>Close</button>}>
+      {!rules ? <Spinner /> : rules.length === 0 ? <p className="muted">The rules aren't available right now. Please ask the temple office.</p> : groups.map((g) => (
+        <section key={g} className="dsec" style={{ marginBottom: 14 }}>
+          <span className="ulabel">{g}</span>
+          <ol className="rules-list" start={n + 1}>{rules.filter((r) => r.category === g).map((r) => { n++; return <li key={n}>{r.text}</li> })}</ol>
+        </section>
+      ))}
+    </Modal>
   )
 }

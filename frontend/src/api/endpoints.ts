@@ -19,6 +19,7 @@ export const authApi = {
   profile: () => api<{ user: AuthUser }>('/auth/profile'),
   registrationStatus: () => api<{ open: boolean; roles: SignupRole[]; next_opens: string | null; closes: string | null }>('/auth/registration-status'),
   register: (input: RegisterInput) => api<{ message: string }>('/auth/register', { method: 'POST', body: input }),
+  templeRules: () => api<{ rules: { text: string; category: string }[] }>('/auth/temple-rules'),
 }
 
 export const usersApi = {
