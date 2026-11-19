@@ -35,13 +35,13 @@
 
 ## 1b. Is it really working? (full-stack status, 19 Nov)
 
-**Designed pages: 47 in the site map.** Built and working on real data: **36**. Partly: **4**. Not started: **7**.
+**Designed pages: 47 in the site map.** Built and working on real data: **45**. Partly: **1** (M10 after leaving). Not started: **1** (M12 language, waiting on the committee). Updated 19 Nov evening.
 
 | Status | Pages |
 |---|---|
 | ✅ Built, real data (database → server → screen) | H1, H3, AC1, AC2, AC3, AC4, T1–T7, C1, C3, C4, P1, P2, P3, P5, R1, R2, G1, G2 · M1, M2, M3, M4, M5, M7, M8, M9, M11, M13 · W2, W3 · plus Rao garu's phone (AC1/AC2 phone) and the Allocation view |
 | ◐ Partly | AI1 Ask AI (answers common questions from live data; not Claude yet) · G3 settings (closing time, sign-up and login alerts; not temple timings or rooms) · M10 after leaving ("I'm back" only) |
-| ✗ Not started | H2 festival-day Home · C2 week view · C5 event details · M6 ask a question · M12 language · W1 public hall form |
+| ✗ Not started | M12 language (needs the committee to choose languages and speakers to check translations) |
 
 **What "working" means, feature by feature:**
 
