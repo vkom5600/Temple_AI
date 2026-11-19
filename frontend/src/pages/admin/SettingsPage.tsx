@@ -7,6 +7,8 @@ import type { Setting } from '../../types'
 const HELP: Record<Setting['key'], string> = {
   registration_open: 'The main switch for sign-ups. Who can sign up, and when, is set in People → Sign-up window.',
   login_alert_to_chairman: 'An email each time a committee member, staff or volunteer signs in.',
+  auto_reminders: 'Between 7am and 9pm, the people on an overdue task get a reminder on their phone, at most every 3 hours and 3 times in all.',
+  nightly_report: "Just after midnight, yesterday's report is written and sent to you. Reports → Daily shows it.",
   closing_time: "After this time, you're told if anyone is still checked in or nobody confirmed lamps, gas and doors.",
 }
 

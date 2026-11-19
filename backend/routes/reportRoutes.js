@@ -1,38 +1,10 @@
 import express from "express";
+import { getDaily, makeDaily } from "../controllers/reportController.js";
+import { authenticateToken, authorizeRoles, ADMIN_ROLES } from "../middleware/authMiddleware.js";
 
-import {
-  generateReport,
-  getDailyReports,
-  getDailyReportByDate,
-  generateAISummary
-} from "../controllers/reportController.js";
-
-import { authenticateToken } from "../middleware/authMiddleware.js";
-
+// R1 nightly report (chairman and committee)
 const router = express.Router();
-
-router.use(authenticateToken);
-
-// Only chairman and committee can access reports.
-const allowManagementRoles = (req, res, next) => {
-  if (!req.user || !["chairman", "committee"].includes(req.user.role)) {
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. Only chairman and committee can access reports."
-    });
-  }
-
-  next();
-};
-
-router.use(allowManagementRoles);
-
-router.post("/generate", generateReport);
-
-router.get("/", getDailyReports);
-
-router.get("/:date", getDailyReportByDate);
-
-router.post("/:date/ai-summary", generateAISummary);
-
+router.use(authenticateToken, authorizeRoles(...ADMIN_ROLES));
+router.get("/daily/:date", getDaily);
+router.post("/daily/:date", makeDaily);
 export default router;

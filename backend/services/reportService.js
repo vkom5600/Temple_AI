@@ -1,263 +1,131 @@
 import pool from "../config/db.js";
-import { askClaude } from "./claudeService.js";
+import { TIMEZONE } from "./taskService.js";
+import { aiEnabled, aiModel, askText } from "./aiService.js";
 
-const validateReportDate = (reportDate) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) {
-    throw new Error("Report date must be in YYYY-MM-DD format");
-  }
+// R1 nightly report (Phase 4): the facts for one temple day, a short written
+// summary (Temple AI when connected, otherwise the built-in wording), stored in
+// daily_reports. The Reports page and the chairman's notification read it.
 
-  const parsedDate = new Date(`${reportDate}T00:00:00Z`);
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-  if (
-    Number.isNaN(parsedDate.getTime()) ||
-    parsedDate.toISOString().slice(0, 10) !== reportDate
-  ) {
-    throw new Error("Invalid report date");
-  }
+export const templeDate = (offsetDays = 0) => {
+    const d = new Date(Date.now() + offsetDays * 86_400_000);
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit" })
+        .formatToParts(d).map((x) => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day}`;
 };
 
-export const collectDailyReportData = async (reportDate) => {
-  validateReportDate(reportDate);
+const dayLabel = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
-  // 1. Task statistics
-  const taskResult = await pool.query(
-    `SELECT
-       COUNT(*) FILTER (
-         WHERE created_at::date = $1::date
-       )::int AS tasks_total,
+// Everything that happened on one temple day, as plain numbers and names.
+export const buildDayFacts = async (date) => {
+    if (!DATE.test(date)) throw new Error("Date must be YYYY-MM-DD");
+    const tz = TIMEZONE;
+    const one = async (sql, params) => (await pool.query(sql, params)).rows[0];
+    const all = async (sql, params) => (await pool.query(sql, params)).rows;
 
-       COUNT(*) FILTER (
-         WHERE created_at::date = $1::date
-         AND status = 'assigned'
-       )::int AS tasks_assigned,
+    const tasks = await one(
+        `SELECT COUNT(*)::int AS due,
+                COUNT(*) FILTER (WHERE status IN ('done', 'awaiting_signoff'))::int AS finished,
+                COUNT(*) FILTER (WHERE completed_at > due_at)::int AS late,
+                COUNT(*) FILTER (WHERE status = 'todo')::int AS not_done,
+                COUNT(*) FILTER (WHERE status = 'flagged')::int AS couldnt_do,
+                COUNT(*) FILTER (WHERE status = 'awaiting_signoff')::int AS waiting_signoff
+         FROM tasks
+         WHERE status <> 'cancelled' AND (due_at AT TIME ZONE $2)::date = $1::date`, [date, tz]);
+    const lateOnes = await all(
+        `SELECT t.title, COALESCE(u.full_name, INITCAP(t.assigned_group)) AS who
+         FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to
+         WHERE t.status <> 'cancelled' AND (t.due_at AT TIME ZONE $2)::date = $1::date
+           AND (t.completed_at > t.due_at OR t.status = 'todo')
+         ORDER BY t.due_at LIMIT 5`, [date, tz]);
 
-       COUNT(*) FILTER (
-         WHERE created_at::date = $1::date
-         AND status = 'completed'
-       )::int AS tasks_completed,
+    const people = await all(
+        `SELECT u.full_name, COALESCE(a.status, 'none') AS status, a.check_in
+         FROM users u
+         LEFT JOIN attendance a ON a.user_id = u.id AND a.attendance_date = $1::date
+         WHERE u.is_active AND u.removed_at IS NULL AND u.approval_status = 'approved' AND u.role IN ('staff', 'volunteer')`, [date]);
+    const came = people.filter((p) => p.check_in);
+    const absent = people.filter((p) => p.status === "absent");
+    const missing = people.filter((p) => !p.check_in && p.status !== "absent");
 
-       COUNT(*) FILTER (
-         WHERE created_at::date = $1::date
-         AND status = 'pending_verification'
-       )::int AS tasks_pending_verification,
+    const issues = await one(
+        `SELECT COUNT(*) FILTER (WHERE (created_at AT TIME ZONE $2)::date = $1::date)::int AS reported,
+                COUNT(*) FILTER (WHERE (created_at AT TIME ZONE $2)::date = $1::date AND status <> 'open')::int AS sorted,
+                COUNT(*) FILTER (WHERE status = 'open')::int AS still_open
+         FROM issues`, [date, tz]);
+    const openIssues = await all(`SELECT description FROM issues WHERE status = 'open' ORDER BY created_at DESC LIMIT 3`);
 
-       COUNT(*) FILTER (
-         WHERE created_at::date = $1::date
-         AND status = 'approved'
-       )::int AS tasks_approved,
+    const bookings = await all(
+        `SELECT b.title, b.kind, b.guests, r.name AS space
+         FROM bookings b JOIN resources r ON r.id = b.resource_id
+         WHERE b.status = 'approved' AND (b.starts_at AT TIME ZONE $2)::date = $1::date
+         ORDER BY b.starts_at`, [date, tz]);
+    const pending = await one(`SELECT COUNT(*)::int AS n FROM bookings WHERE status = 'pending' AND starts_at > NOW()`);
 
-       COUNT(*) FILTER (
-         WHERE due_at::date <= $1::date
-         AND status NOT IN ('approved', 'closed')
-         AND due_at IS NOT NULL
-       )::int AS tasks_overdue
-
-     FROM tasks
-     WHERE created_at::date <= $1::date`,
-    [reportDate]
-  );
-
-  // 2. Attendance statistics
-  const attendanceResult = await pool.query(
-    `SELECT
-       COUNT(*) FILTER (
-         WHERE status = 'present'
-       )::int AS attendance_present,
-
-       COUNT(*) FILTER (
-         WHERE status = 'absent'
-       )::int AS attendance_absent,
-
-       COUNT(*) FILTER (
-         WHERE status = 'late'
-       )::int AS attendance_late
-
-     FROM attendance
-     WHERE attendance_date = $1::date`,
-    [reportDate]
-  );
-
-  // 3. Booking statistics
-  const bookingResult = await pool.query(
-    `SELECT
-       COUNT(*)::int AS bookings_total,
-
-       COUNT(*) FILTER (
-         WHERE status = 'pending'
-       )::int AS bookings_pending,
-
-       COUNT(*) FILTER (
-         WHERE status = 'approved'
-       )::int AS bookings_approved,
-
-       COUNT(*) FILTER (
-         WHERE status = 'rejected'
-       )::int AS bookings_rejected
-
-     FROM bookings
-     WHERE start_at::date = $1::date`,
-    [reportDate]
-  );
-
-  return {
-    report_date: reportDate,
-    ...taskResult.rows[0],
-    ...attendanceResult.rows[0],
-    ...bookingResult.rows[0]
-  };
-};
-
-export const saveDailyReport = async (reportData) => {
-  const {
-    report_date,
-    tasks_total,
-    tasks_assigned,
-    tasks_completed,
-    tasks_pending_verification,
-    tasks_approved,
-    tasks_overdue,
-    attendance_present,
-    attendance_absent,
-    attendance_late,
-    bookings_total,
-    bookings_pending,
-    bookings_approved,
-    bookings_rejected
-  } = reportData;
-
-  const result = await pool.query(
-    `INSERT INTO daily_reports (
-       report_date,
-       tasks_total,
-       tasks_assigned,
-       tasks_completed,
-       tasks_pending_verification,
-       tasks_approved,
-       tasks_overdue,
-       attendance_present,
-       attendance_absent,
-       attendance_late,
-       bookings_total,
-       bookings_pending,
-       bookings_approved,
-       bookings_rejected,
-       ai_summary,
-       generated_at
-     )
-     VALUES (
-       $1, $2, $3, $4, $5, $6, $7,
-       $8, $9, $10, $11, $12, $13, $14,
-       NULL, CURRENT_TIMESTAMP
-     )
-     ON CONFLICT (report_date)
-     DO UPDATE SET
-       tasks_total = EXCLUDED.tasks_total,
-       tasks_assigned = EXCLUDED.tasks_assigned,
-       tasks_completed = EXCLUDED.tasks_completed,
-       tasks_pending_verification =
-         EXCLUDED.tasks_pending_verification,
-       tasks_approved = EXCLUDED.tasks_approved,
-       tasks_overdue = EXCLUDED.tasks_overdue,
-       attendance_present = EXCLUDED.attendance_present,
-       attendance_absent = EXCLUDED.attendance_absent,
-       attendance_late = EXCLUDED.attendance_late,
-       bookings_total = EXCLUDED.bookings_total,
-       bookings_pending = EXCLUDED.bookings_pending,
-       bookings_approved = EXCLUDED.bookings_approved,
-       bookings_rejected = EXCLUDED.bookings_rejected,
-       ai_summary = NULL,
-       generated_at = CURRENT_TIMESTAMP
-     RETURNING *`,
-    [
-      report_date,
-      tasks_total,
-      tasks_assigned,
-      tasks_completed,
-      tasks_pending_verification,
-      tasks_approved,
-      tasks_overdue,
-      attendance_present,
-      attendance_absent,
-      attendance_late,
-      bookings_total,
-      bookings_pending,
-      bookings_approved,
-      bookings_rejected
-    ]
-  );
-
-  return result.rows[0];
-};
-
-export const generateReportAISummary = async (reportDate) => {
-  validateReportDate(reportDate);
-
-  const reportResult = await pool.query(
-    `SELECT *
-     FROM daily_reports
-     WHERE report_date = $1::date`,
-    [reportDate]
-  );
-
-  if (reportResult.rows.length === 0) {
-    const error = new Error("Daily report not found. Generate the report first.");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const report = reportResult.rows[0];
-
-  const prompt = `
-Prepare a clear daily operational report for a temple management system.
-
-Use only the supplied database statistics.
-Do not invent events, reasons, names, or explanations.
-Mention important operational figures, pending work, overdue tasks,
-attendance, and booking status.
-Give practical recommendations based on the figures.
-If a statistic is zero, report that accurately.
-
-Use headings and concise bullet points.
-`;
-
-  const context = JSON.stringify(report);
-
-  // Claude is the only AI provider for this project.
-  const summary = await askClaude(prompt, context);
-
-  const updateResult = await pool.query(
-    `UPDATE daily_reports
-     SET ai_summary = $1
-     WHERE report_date = $2::date
-     RETURNING *`,
-    [summary, reportDate]
-  );
-
-  return updateResult.rows[0];
-};
-
-export const generateDailyReport = async (reportDate) => {
-  const reportData = await collectDailyReportData(reportDate);
-  const savedReport = await saveDailyReport(reportData);
-
-  // Keep the numerical report even when the teammate has not
-  // configured the Claude credentials yet.
-  if (
-    !process.env.ANTHROPIC_API_KEY ||
-    !process.env.CLAUDE_MODEL
-  ) {
     return {
-      report: savedReport,
-      summaryStatus: "pending",
-      message: "Report statistics saved. Claude credentials are not configured yet."
+        date,
+        day: dayLabel(date),
+        tasks: { ...tasks, late_or_not_done: lateOnes.map((t) => `${t.title} (${t.who})`) },
+        attendance: { expected: people.length - absent.length, came: came.length, absent: absent.map((p) => p.full_name), did_not_come: missing.map((p) => p.full_name) },
+        problems: { ...issues, open: openIssues.map((i) => i.description) },
+        bookings: { held: bookings.map((b) => `${b.title} (${b.space}${b.guests ? `, ${b.guests} people` : ""})`), requests_waiting: pending.n },
     };
-  }
-
-  const reportWithSummary = await generateReportAISummary(reportDate);
-
-  return {
-    report: reportWithSummary,
-    summaryStatus: "generated",
-    message: "Daily report and Claude AI summary generated successfully."
-  };
 };
+
+const pct = (a, b) => (b ? Math.round((a / b) * 100) : null);
+
+// The built-in wording, used without Temple AI (or if a call fails).
+export const rulesSummary = (f) => {
+    const parts = [];
+    const t = f.tasks;
+    if (t.due) {
+        const p = pct(t.finished, t.due);
+        parts.push(`${p >= 90 ? "A steady day" : p >= 70 ? "A mostly good day" : "A busy day"}: ${t.finished} of ${t.due} tasks were finished (${p}%).`);
+        if (t.late_or_not_done.length) parts.push(`Late or not done: ${t.late_or_not_done.slice(0, 3).join(", ")}.`);
+        if (t.waiting_signoff) parts.push(`${t.waiting_signoff} safety task${t.waiting_signoff === 1 ? " is" : "s are"} waiting for a second check.`);
+    } else {
+        parts.push("No tasks were due.");
+    }
+    const a = f.attendance;
+    if (a.expected) parts.push(`${a.came} of ${a.expected} staff and volunteers came in${a.did_not_come.length ? ` (not in: ${a.did_not_come.slice(0, 4).join(", ")})` : ""}.`);
+    if (f.bookings.held.length) parts.push(`Held at the temple: ${f.bookings.held.slice(0, 3).join("; ")}.`);
+    const pr = f.problems;
+    if (pr.reported) parts.push(`${pr.reported} problem${pr.reported === 1 ? " was" : "s were"} reported and ${pr.sorted} sorted.`);
+    if (pr.still_open) parts.push(`${pr.still_open} problem${pr.still_open === 1 ? " is" : "s are"} still open${pr.open[0] ? `, including "${pr.open[0]}"` : ""}.`);
+    if (f.bookings.requests_waiting) parts.push(`${f.bookings.requests_waiting} booking request${f.bookings.requests_waiting === 1 ? " is" : "s are"} waiting for a decision.`);
+    return parts.join(" ");
+};
+
+const SUMMARY_SYSTEM = `You write the short report for a Hindu temple's chairman, from the facts given. Write 3 to 5 plain sentences: how the period went, what ran late or was missed (with names), anything that needs the chairman's attention, and one practical suggestion if the facts support it. Use only the facts given; never invent numbers, names or events. No headings, no bullet points, no greeting. British English.`;
+
+// A summary for any facts: Temple AI when connected, else the built-in wording.
+export const writeSummary = async (facts, { label } = {}) => {
+    if (aiEnabled()) {
+        const r = await askText({
+            system: SUMMARY_SYSTEM,
+            messages: [{ role: "user", content: `${label ?? facts.day ?? "Report"}\n\nFACTS:\n${JSON.stringify(facts)}` }],
+            maxTokens: 800,
+        });
+        if (r.ok && r.text) return { summary: r.text, written_by: "ai" };
+    }
+    return { summary: facts.tasks ? rulesSummary(facts) : null, written_by: "rules" };
+};
+
+export const generateDailyReport = async (date) => {
+    const facts = await buildDayFacts(date);
+    const { summary, written_by } = await writeSummary(facts);
+    const row = await pool.query(
+        `INSERT INTO daily_reports (report_date, facts, summary, written_by) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (report_date) DO UPDATE SET facts = EXCLUDED.facts, summary = EXCLUDED.summary,
+                                                written_by = EXCLUDED.written_by, created_at = NOW()
+         RETURNING report_date, facts, summary, written_by, created_at`,
+        [date, JSON.stringify(facts), summary, written_by]
+    );
+    return row.rows[0];
+};
+
+export const findDailyReport = async (date) =>
+    (await pool.query(`SELECT TO_CHAR(report_date, 'YYYY-MM-DD') AS report_date, facts, summary, written_by, created_at FROM daily_reports WHERE report_date = $1`, [date])).rows[0] ?? null;
+
+export const writerLabel = (r) => (r.written_by === "ai" ? `Temple AI (${aiModel()})` : "the records");

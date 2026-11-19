@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { attendanceApi, auditApi, issuesApi, tasksApi } from '../../api/endpoints'
+import { attendanceApi, auditApi, bookingsApi, issuesApi, reportsApi, tasksApi, type NightlyReport } from '../../api/endpoints'
 import { BRAND } from '../../branding'
 import { toDateInput } from '../../lib/format'
 import { useAdminContext } from '../../layouts/AdminLayout'
 import { useToast } from '../../components/Toast'
 import { ErrorNote, Icon, Spinner } from '../../components/ui'
-import type { AttendanceDay, AuditEntry, Issue, Task } from '../../types'
+import type { AttendanceDay, AuditEntry, Booking, Issue, Task } from '../../types'
 
 // R1 Reports (Summary) and R2 Activity log (designs: screens/30_R1, 31_R2).
 // "How the temple is doing, and a record of every change."
@@ -72,6 +72,9 @@ function Summary() {
   const [issues, setIssues] = useState<Issue[]>([])
   const [days, setDays] = useState<AttendanceDay[] | null>(null)
   const [made, setMade] = useState(new Date())
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [nightly, setNightly] = useState<NightlyReport | null>(null)
+  const [writing, setWriting] = useState(false)
   const period = useMemo(() => periodOf(span, offset), [span, offset])
 
   const load = useCallback(() => {
@@ -82,9 +85,29 @@ function Summary() {
     const list: string[] = []
     for (const d = new Date(period.from); d <= period.to && d <= new Date(); d.setDate(d.getDate() + 1)) list.push(toDateInput(d))
     setDays(null)
+    bookingsApi.list({ from: toDateInput(period.from), to: toDateInput(period.to) }).then((r) => setBookings(r.bookings)).catch(() => setBookings([]))
+    // A finished day has a nightly report (written at 00:05)
+    setNightly(null)
+    if (span === 'daily' && toDateInput(period.from) < toDateInput(new Date())) {
+      reportsApi.daily(toDateInput(period.from)).then((r) => setNightly(r.report)).catch(() => {})
+    }
     Promise.all(list.map((d) => attendanceApi.day(d).catch(() => null))).then((r) => setDays(r.filter(Boolean) as AttendanceDay[]))
-  }, [period])
+  }, [period, span])
   useEffect(load, [load])
+
+  const writeNightly = async () => {
+    setWriting(true)
+    try {
+      const r = await reportsApi.writeDaily(toDateInput(period.from))
+      setNightly(r.report)
+      toast('Report written')
+    } catch (err) {
+      toast((err as Error).message)
+    } finally {
+      setWriting(false)
+    }
+  }
+  const pastDay = span === 'daily' && toDateInput(period.from) < toDateInput(new Date())
 
   const prev = periodOf(span, offset - 1)
   const due = (tasks ?? []).filter((t) => inRange(t.due_at, period.from, period.to) && new Date(t.due_at!) <= new Date())
@@ -127,10 +150,17 @@ function Summary() {
     ? `${reported.length} problem${reported.length === 1 ? ' was' : 's were'} reported and ${fixed.length} ${fixed.length === 1 ? 'has' : 'have'} been sorted.${stillOpen.length ? ` Still open: ${stillOpen.slice(0, 2).map((i) => `"${i.description}"`).join(', ')}.` : ''}`
     : 'No problems were reported.'
   const summaryText = `${donePct >= 90 ? 'A steady' : donePct >= 70 ? 'A mostly good' : 'A busy'} ${span === 'daily' ? 'day' : span === 'weekly' ? 'week' : 'month'}. ${donePct}% of tasks were finished${lateByTitle[0] && lateByTitle[0][1] > 1 ? `; "${lateByTitle[0][0]}" ran late ${lateByTitle[0][1]} times, so it may need an earlier slot or a second person` : ''}.`
-  sections.push({ h: 'Summary', text: summaryText, p: summaryText })
+  const held = bookings.filter((b) => b.status === 'approved')
+  const events = held.filter((b) => b.kind === 'event')
+  const waiting = bookings.filter((b) => b.status === 'pending')
+  const bookingText = held.length || waiting.length
+    ? `${held.length} booking${held.length === 1 ? '' : 's'} and events in this period${events.length ? ` (${events.length} temple event${events.length === 1 ? '' : 's'}: ${events.slice(0, 2).map((b) => b.title).join(', ')})` : ''}.${waiting.length ? ` ${waiting.length} request${waiting.length === 1 ? ' is' : 's are'} waiting for a decision.` : ''}`
+    : 'No halls or rooms were booked.'
+  const summary = nightly?.summary ?? summaryText
+  sections.push({ h: 'Summary', text: summary, p: summary })
   sections.push({ h: 'Tasks', text: tasksText, p: tasksText })
   sections.push({ h: 'Attendance', text: attText, p: attText })
-  sections.push({ h: 'Bookings', text: 'Hall bookings start in Phase 3.', p: <span className="muted">Hall bookings start in Phase 3, with Google Calendar.</span> })
+  sections.push({ h: 'Bookings', text: bookingText, p: bookingText })
   sections.push({ h: 'Issues', text: issueText, p: issueText })
 
   const copy = async () => {
@@ -156,10 +186,12 @@ function Summary() {
           <span className="tile-ic ic-saf" style={{ width: 52, height: 52 }}><span className="star" style={{ fontSize: 26 }}>✦</span></span>
           <div className="grow">
             <h2>{title}</h2>
-            <span className="muted small">Made from the records · {made.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, {made.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+            <span className="muted small">{nightly
+              ? <>Nightly report · written by {nightly.written_by_label} · {new Date(nightly.created_at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, {new Date(nightly.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</>
+              : <>Made from the records · {made.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, {made.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</>}</span>
           </div>
           <div className="row no-print">
-            <button className="btn btn-outline btn-sm" onClick={load}><Icon name="repeat" size={14} /> Regenerate</button>
+            <button className="btn btn-outline btn-sm" disabled={writing} onClick={pastDay ? writeNightly : load}><Icon name="repeat" size={14} /> {writing ? 'Writing…' : 'Regenerate'}</button>
             <button className="btn btn-outline btn-sm" onClick={copy}><Icon name="mail" size={14} /> Copy as email</button>
             <button className="btn btn-primary btn-sm" onClick={() => window.print()}><Icon name="download" size={14} /> Download PDF</button>
           </div>
@@ -170,7 +202,7 @@ function Summary() {
             <div className="report-stats">
               <div><small>Tasks done</small><b>{donePct}% {duePrev.length > 0 && <em className={change >= 0 ? 'up' : 'down'}>({change >= 0 ? '↑' : '↓'}{Math.abs(change)}%)</em>}</b></div>
               <div><small>Attendance</small><b>{pct(came, expected)}%</b></div>
-              <div><small>Bookings</small><b>—</b></div>
+              <div><small>Bookings</small><b>{held.length}</b></div>
               <div><small>Open issues</small><b>{stillOpen.length}</b></div>
               {(overdue.length > 0 || stillOpen.length > 0 || lateByTitle.some(([, n]) => n > 1)) && (
                 <div className="report-attn">
@@ -183,7 +215,7 @@ function Summary() {
             </div>
             <div className="report-body">
               {sections.map((s) => <section key={s.h}><h3>{s.h}</h3><p>{s.p}</p></section>)}
-              <p className="muted small" style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>Made automatically from the Temple AI records. The AI-written nightly report arrives in Phase 4.</p>
+              <p className="muted small" style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>{nightly ? `The summary was written by ${nightly.written_by_label} just after midnight; the numbers come straight from the records.` : 'Made automatically from the Temple AI records. Each finished day gets a nightly report just after midnight.'}</p>
             </div>
           </>
         )}

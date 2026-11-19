@@ -1,55 +1,24 @@
 import cron from "node-cron";
-import pool from "../config/db.js";
+import { notify } from "../services/notificationService.js";
+import { getSetting } from "../services/settingsService.js";
+import { TIMEZONE } from "../services/taskService.js";
+import { generateDailyReport, templeDate } from "../services/reportService.js";
 
-import {
-  generateDailyReport
-} from "../services/reportService.js";
-
+// 00:05 temple time: write yesterday's report and send it to the chairman (in-app).
 export const runDailyReportJob = async () => {
-  try {
-    // Generate yesterday's report after the previous day has ended.
-    const dateResult = await pool.query(
-      `SELECT TO_CHAR(
-         CURRENT_DATE - INTERVAL '1 day',
-         'YYYY-MM-DD'
-       ) AS report_date`
-    );
-
-    const reportDate = dateResult.rows[0].report_date;
-
-    console.log(
-      `Starting daily report generation for ${reportDate}`
-    );
-
-    const result = await generateDailyReport(reportDate);
-
-    console.log("Daily report job completed.");
-    console.log("Report date:", reportDate);
-    console.log("Claude summary status:", result.summaryStatus);
-
-    return result;
-  } catch (error) {
-    console.error("Daily report job failed:", error);
-    throw error;
-  }
+    if (!(await getSetting("nightly_report", true))) return { skipped: "switched off" };
+    const date = templeDate(-1);
+    const report = await generateDailyReport(date);
+    await notify({
+        roles: ["chairman"],
+        title: `Yesterday at the temple (${new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })})`,
+        message: report.summary,
+        type: "report",
+    });
+    console.log(`Nightly report for ${date} written by ${report.written_by}.`);
+    return report;
 };
 
 export const startDailyReportJob = () => {
-  cron.schedule(
-    "5 0 * * *",
-    async () => {
-      try {
-        await runDailyReportJob();
-      } catch (error) {
-        console.error("Scheduled daily report error:", error);
-      }
-    },
-    {
-      timezone: "Asia/Kolkata"
-    }
-  );
-
-  console.log(
-    "Daily report scheduler started. It runs every day at 12:05 AM IST."
-  );
+    cron.schedule("5 0 * * *", () => runDailyReportJob().catch((error) => console.error("Nightly report job failed:", error.message)), { timezone: TIMEZONE });
 };

@@ -55,7 +55,7 @@ export interface RegisterInput {
 }
 
 export interface Setting {
-  key: 'registration_open' | 'login_alert_to_chairman' | 'closing_time'
+  key: 'registration_open' | 'login_alert_to_chairman' | 'closing_time' | 'auto_reminders' | 'nightly_report'
   value: boolean | string
   label: string
   updated_at: string

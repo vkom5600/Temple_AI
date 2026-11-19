@@ -8,7 +8,9 @@ export const SETTING_KEYS = {
   registration_opens: { type: "date", label: "Sign-ups open on" },
   registration_closes: { type: "date", label: "Sign-ups close after" },
   login_alert_to_chairman: { type: "boolean", label: "Email the chairman when someone signs in" },
-  closing_time: { type: "time", label: "Evening closing check" }
+  closing_time: { type: "time", label: "Evening closing check" },
+  auto_reminders: { type: "boolean", label: "Remind people about overdue tasks every few hours" },
+  nightly_report: { type: "boolean", label: "Write a report every night" }
 };
 
 const parse = (key, raw) =>

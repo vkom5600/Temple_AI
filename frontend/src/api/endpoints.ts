@@ -144,6 +144,13 @@ export const aiApi = {
     api<{ answer: string; source: string }>('/ai/ask', { method: 'POST', body: { question, history } }),
 }
 
+// R1 nightly report
+export interface NightlyReport { report_date: string; summary: string; written_by: 'ai' | 'rules'; written_by_label: string; created_at: string }
+export const reportsApi = {
+  daily: (date: string) => api<{ report: NightlyReport }>(`/reports/daily/${date}`),
+  writeDaily: (date: string) => api<{ report: NightlyReport; message: string }>(`/reports/daily/${date}`, { method: 'POST' }),
+}
+
 // AI2 Plan with AI: draft from the conversation, then confirm (event + tasks)
 export const plansApi = {
   draft: (messages: string[], asked: string[]) =>

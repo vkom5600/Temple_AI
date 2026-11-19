@@ -22,14 +22,14 @@ import { startClosingCheckJob } from "./jobs/closingCheckJob.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import planRoutes from "./routes/planRoutes.js";
 import askRoutes from "./routes/askRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 import { resourceRouter, ruleRouter } from "./routes/resourceRoutes.js";
 // import calendarRoutes from "./routes/calendarRoutes.js";
 // import aiRoutes from "./routes/aiRoutes.js";
 // Phase 4
 import auditRoutes from "./routes/auditRoutes.js";
-// import reportRoutes from "./routes/reportRoutes.js";
-// import { startDailyReportJob } from "./jobs/dailyReportJob.js";
-// import { startOverdueReminderJob } from "./jobs/overdueReminderJob.js";
+import { startDailyReportJob } from "./jobs/dailyReportJob.js";
+import { startOverdueReminderJob } from "./jobs/overdueReminderJob.js";
 
 const app = express();
 
@@ -49,10 +49,10 @@ app.use("/api/resources", resourceRouter);
 app.use("/api/rules", ruleRouter);
 app.use("/api/plans", planRoutes);
 app.use("/api/ai", askRoutes);
+app.use("/api/reports", reportRoutes);
 // app.use("/api/calendar", calendarRoutes);
 // app.use("/api/ai", aiRoutes);
 app.use("/api/audit-logs", auditRoutes);
-// app.use("/api/reports", reportRoutes);
 
 app.get("/api/health", async (req, res) => {
     try {
@@ -85,6 +85,6 @@ app.listen(PORT, () => {
     startClosingCheckJob();
 
     // Phase 4
-    // startDailyReportJob();
-    // startOverdueReminderJob();
+    startDailyReportJob();
+    startOverdueReminderJob();
 });
