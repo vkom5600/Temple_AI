@@ -301,3 +301,11 @@ export async function seedFestivals(pool) {
     }
     console.log(`Seeded ${list.length} festivals (dates to confirm).`);
 }
+
+// P2 extras for one demo person, as in the design (Ramesh, cleaner).
+export async function seedPersonExtras(pool) {
+    await pool.query(
+        `UPDATE staff_profiles sp SET keyholder = 'Main Mandir, Stores G12', shift_pattern = 'Mon–Fri · 08:00–16:00',
+                notes = 'Trained on the floor scrubber. Key holder for the supply store.'
+         FROM users u WHERE u.id = sp.user_id AND u.email = 'ramesh@temple.demo' AND sp.keyholder IS NULL`);
+}

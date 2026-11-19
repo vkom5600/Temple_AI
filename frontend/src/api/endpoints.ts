@@ -54,6 +54,9 @@ export const notificationsApi = {
   // H3 Broadcast (chairman, committee)
   broadcast: (input: { audience: BroadcastAudience; designations: string[]; message: string; urgent: boolean }) =>
     api<{ count: number; message: string }>('/notifications/broadcast', { method: 'POST', body: input }),
+  // A message to one or a few people
+  message: (user_ids: number[], message: string) =>
+    api<{ count: number; message: string }>('/notifications/message', { method: 'POST', body: { user_ids, message } }),
 }
 
 // R2 Activity log (chairman, committee)

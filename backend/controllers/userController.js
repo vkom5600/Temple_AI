@@ -10,7 +10,7 @@ import { effectiveAccess, validateAccess } from "../middleware/access.js";
 const USER_COLUMNS = `
     u.id, u.full_name, u.email, u.role, u.phone, u.is_active,
     u.approval_status, u.reviewed_at, u.rejection_reason, u.created_at,
-    sp.designation, sp.emergency_contact, sp.joining_date, u.access, u.signup_details
+    sp.designation, sp.emergency_contact, sp.joining_date, sp.keyholder, sp.shift_pattern, sp.notes, u.access, u.signup_details
 `;
 
 const findUser = async (id, db = pool) => {
@@ -92,9 +92,9 @@ export const createUser = async (req, res) => {
 
         await client.query(
             `INSERT INTO staff_profiles
-                (user_id, designation, emergency_contact, joining_date)
-             VALUES ($1, $2, $3, $4)`,
-            [id, data.designation, data.emergency_contact, data.joining_date]
+                (user_id, designation, emergency_contact, joining_date, keyholder, shift_pattern, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [id, data.designation, data.emergency_contact, data.joining_date, data.keyholder, data.shift_pattern, data.notes]
         );
 
         user = await findUser(id, client);
@@ -169,20 +169,23 @@ export const updateUser = async (req, res) => {
 
         await client.query(
             `INSERT INTO staff_profiles
-                (user_id, designation, emergency_contact, joining_date)
-             VALUES ($1, $2, $3, $4)
+                (user_id, designation, emergency_contact, joining_date, keyholder, shift_pattern, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT (user_id) DO UPDATE
              SET designation = EXCLUDED.designation,
                  emergency_contact = EXCLUDED.emergency_contact,
-                 joining_date = EXCLUDED.joining_date`,
-            [id, data.designation, data.emergency_contact, data.joining_date]
+                 joining_date = EXCLUDED.joining_date,
+                 keyholder = EXCLUDED.keyholder,
+                 shift_pattern = EXCLUDED.shift_pattern,
+                 notes = EXCLUDED.notes`,
+            [id, data.designation, data.emergency_contact, data.joining_date, data.keyholder, data.shift_pattern, data.notes]
         );
 
         user = await findUser(id, client);
 
         const changed = Object.fromEntries(
             ["full_name", "email", "role", "phone", "designation",
-             "emergency_contact", "joining_date"]
+             "emergency_contact", "joining_date", "keyholder", "shift_pattern", "notes"]
                 .filter((key) => String(before[key] ?? "") !== String(user[key] ?? ""))
                 .map((key) => [key, { from: before[key], to: user[key] }])
         );

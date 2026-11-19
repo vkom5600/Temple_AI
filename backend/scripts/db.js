@@ -6,7 +6,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pool from "../config/db.js";
-import { seedDemoData, seedDemoTasks, seedDemoAttendance, seedDemoBookings, seedLastYearEvent, seedFestivals } from "./seed.js";
+import { seedDemoData, seedDemoTasks, seedDemoAttendance, seedDemoBookings, seedLastYearEvent, seedFestivals, seedPersonExtras } from "./seed.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.join(here, "..", "database", "migrations");
@@ -74,6 +74,7 @@ async function reset() {
     await seedDemoBookings(pool);
     await seedLastYearEvent(pool);
     await seedFestivals(pool);
+    await seedPersonExtras(pool);
 }
 
 const commands = {
@@ -87,6 +88,7 @@ const commands = {
     await seedDemoBookings(pool);
     await seedLastYearEvent(pool);
     await seedFestivals(pool);
+    await seedPersonExtras(pool);
     }
 };
 

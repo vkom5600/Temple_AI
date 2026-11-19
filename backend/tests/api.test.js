@@ -176,6 +176,19 @@ describe("public booking form (W1)", () => {
     });
 });
 
+describe("direct messages", () => {
+    test("the committee can message one person; staff can't", async () => {
+        const anil = (await get("/users", "raghu")).body.users.find((u) => u.email.startsWith("anil"))
+        assert.equal((await post("/notifications/message", "dev", { user_ids: [anil.id], message: "hi" })).status, 403);
+        assert.equal((await post("/notifications/message", "meena", { user_ids: [], message: "hi" })).status, 400);
+        const r = await post("/notifications/message", "meena", { user_ids: [anil.id], message: "Test: please bring the spare keys." });
+        assert.equal(r.status, 201);
+        const latest = (await get("/notifications", "anil")).body.notifications[0];
+        assert.equal(latest.message, "Test: please bring the spare keys.");
+        assert.ok(latest.notification_type.startsWith("broadcast"), "shows as a message on the phone");
+    });
+});
+
 describe("questions (M6)", () => {
     test("staff ask, the committee answers, the asker sees it", async () => {
         assert.equal((await post("/questions", "raghu", { question: "Can the chairman ask?" })).status, 403, "staff and volunteers ask");
@@ -203,6 +216,14 @@ describe("people", () => {
         assert.equal((await del(`/users/${id}`, "meena")).status, 403);
         assert.equal((await del(`/users/${id}`, "raghu")).status, 200);
         assert.ok(!(await get("/users", "raghu")).body.users.some((u) => u.id === id), "removed people leave the list");
+    });
+    test("keyholder, shift pattern and notes are saved", async () => {
+        const ramesh = (await get("/users", "raghu")).body.users.find((u) => u.email.startsWith("ramesh"));
+        assert.equal(ramesh.keyholder, "Main Mandir, Stores G12", "seeded");
+        const r = await put(`/users/${ramesh.id}`, "raghu", { full_name: ramesh.full_name, email: ramesh.email, role: "staff", phone: ramesh.phone, designation: "cleaner", emergency_contact: "", joining_date: "", keyholder: "Main Mandir", shift_pattern: "Weekends", notes: "Test note" });
+        assert.equal(r.status, 200);
+        assert.equal(r.body.user.shift_pattern, "Weekends");
+        assert.equal(r.body.user.notes, "Test note");
     });
     test("sign-up window: only open groups can register", async () => {
         assert.equal((await put("/settings/signup-window", "raghu", { open: true, roles: ["volunteer"], opens: null, closes: null })).status, 200);

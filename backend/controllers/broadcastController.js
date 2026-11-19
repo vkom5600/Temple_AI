@@ -51,3 +51,23 @@ export const sendBroadcast = async (req, res) => {
         message: sent.length ? `Sent to ${sent.length} ${sent.length === 1 ? "person" : "people"}` : "Nobody matched those recipients"
     });
 };
+
+// POST /api/notifications/message  (chairman, committee)  { user_ids: [..], message }
+// A direct message to one or a few people (P2 "Message Ramesh", People "Remind").
+// It shows on their phone like a broadcast ("Message from Raghu").
+export const sendDirect = async (req, res) => {
+    const ids = Array.isArray(req.body?.user_ids) ? [...new Set(req.body.user_ids.map(Number).filter(Number.isInteger))].slice(0, 50) : [];
+    const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+    if (!ids.length) return res.status(400).json({ success: false, message: "Choose who to message" });
+    if (!message || message.length > 280) return res.status(400).json({ success: false, message: "Please write a message (up to 280 characters)" });
+
+    const sent = await notify({
+        userIds: ids,
+        excludeUserId: req.user.id,
+        title: `Message from ${req.user.full_name.split(" ")[0]}`,
+        message,
+        type: "broadcast"
+    });
+    await logAudit({ actorId: req.user.id, action: "message.sent", entityType: "broadcast", details: { recipients: sent.length, message: message.slice(0, 80) } });
+    res.status(201).json({ success: true, count: sent.length, message: sent.length === 1 ? "Message sent" : `Sent to ${sent.length} people` });
+};

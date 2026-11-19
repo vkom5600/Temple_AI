@@ -13,6 +13,7 @@ import TaskDetails from '../../components/tasks/TaskDetails'
 import { AREA_INFO, DEFAULT_ACCESS, allowed, can } from '../../lib/access'
 import ViewOnly from '../../components/ViewOnly'
 import { ukAddDays, ukDay, ukNoon } from '../../lib/uk'
+import MessageDialog from '../../components/MessageDialog'
 
 const BLANK: UserInput = {
   full_name: '',
@@ -22,6 +23,9 @@ const BLANK: UserInput = {
   designation: '',
   emergency_contact: '',
   joining_date: '',
+  keyholder: '',
+  shift_pattern: '',
+  notes: '',
   password: '',
 }
 
@@ -33,6 +37,9 @@ const toInput = (u: User): UserInput => ({
   designation: u.designation ?? '',
   emergency_contact: u.emergency_contact ?? '',
   joining_date: u.joining_date?.slice(0, 10) ?? '',
+  keyholder: u.keyholder ?? '',
+  shift_pattern: u.shift_pattern ?? '',
+  notes: u.notes ?? '',
   password: '',
 })
 
@@ -49,6 +56,7 @@ export default function PeoplePage() {
   const [day, setDay] = useState<AttendanceDay | null>(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<User | 'new' | null>(null)
+  const [nudging, setNudging] = useState(false)
   const [query, setQuery] = useState('')
   const [role, setRole] = useState<Role | ''>('')
   const [params, setParams] = useSearchParams()
@@ -102,6 +110,9 @@ export default function PeoplePage() {
               <span className="muted small">Not in yet:</span>
               {day.people.filter((p) => p.state === 'not_in').map((p) => <span key={p.user_id} className="pill pill-saf">{p.full_name.split(' ')[0]}</span>)}
             </span>
+          )}
+          {day.counts.not_in > 0 && allowed(me ?? null, 'broadcast') && (
+            <button className="btn btn-outline btn-sm" style={{ marginLeft: "auto" }} onClick={() => setNudging(true)}><Icon name="bell" size={14} /> Remind {day.counts.not_in}</button>
           )}
         </section>
       )}
@@ -162,6 +173,15 @@ export default function PeoplePage() {
         </section>
       )}
 
+      {nudging && day && (
+        <MessageDialog
+          to={day.people.filter((p) => p.state === 'not_in').map((p) => p.user_id)}
+          names={day.people.filter((p) => p.state === 'not_in').map((p) => p.full_name.split(' ')[0])}
+          initial={"Namaste. We haven't seen you check in yet today. If you're at the temple, please tap \"I'm here\" on your phone."}
+          onClose={() => setNudging(false)}
+        />
+      )}
+
       {editing && (
         <PersonForm
           presence={editing === 'new' ? undefined : presence.get(editing.id)}
@@ -198,6 +218,8 @@ function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }:
   const [busy, setBusy] = useState(false)
   const [menu, setMenu] = useState(false)
   const [editMode, setEditMode] = useState(!person)
+  const [messaging, setMessaging] = useState(false)
+  const { user: me } = useAuth()
   const [removing, setRemoving] = useState(false)
   const [viewingTask, setViewingTask] = useState<number | null>(null)
   const [tasks, setTasks] = useState<Task[] | null>(null)
@@ -301,6 +323,9 @@ function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }:
         </>
       ) : !editMode ? (
         <>
+          {person && person.id !== me?.id && allowed(me ?? null, 'broadcast') && (
+            <button className="btn btn-outline push-left" onClick={() => setMessaging(true)}><Icon name="message" size={16} /> Message {person.full_name.split(' ')[0]}</button>
+          )}
           <button className="btn btn-outline" onClick={onClose}>Close</button>
           {canEdit && <button className="btn btn-primary btn-lg" onClick={() => setEditMode(true)}><Icon name="edit" /> Edit details</button>}
         </>
@@ -374,6 +399,23 @@ function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }:
             <input type="text" autoComplete="new-password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder={isNew ? '8+ characters' : 'Leave blank to keep'} />
           </label>
         </div>
+
+        {form.role !== 'committee' && (
+          <div className="grid-2f">
+            <label className="field">
+              <span className="ulabel">Keyholder / access</span>
+              <input value={form.keyholder} onChange={(e) => set('keyholder', e.target.value)} placeholder="e.g. Main Mandir, Stores G12" />
+            </label>
+            <label className="field">
+              <span className="ulabel">Shift pattern</span>
+              <input value={form.shift_pattern} onChange={(e) => set('shift_pattern', e.target.value)} placeholder="e.g. Mon–Fri · 08:00–16:00" />
+            </label>
+          </div>
+        )}
+        <label className="field">
+          <span className="ulabel">Internal notes <span className="muted" style={{ textTransform: 'none', letterSpacing: 0 }}>(only the committee sees these)</span></span>
+          <textarea rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="e.g. Trained on the floor scrubber. Key holder for the supply store." />
+        </label>
       </div>}
 
       {person?.role === 'committee' && <AccessSection person={person} editable={isChairman} />}
@@ -427,6 +469,7 @@ function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }:
       )}
 
       <ErrorNote>{error}</ErrorNote>
+      {messaging && person && <MessageDialog to={[person.id]} names={[person.full_name.split(' ')[0]]} onClose={() => setMessaging(false)} />}
       {viewingTask && <TaskDetails taskId={viewingTask} onClose={() => setViewingTask(null)} onChanged={loadTasks} />}
     </Modal>
   )
@@ -439,6 +482,9 @@ function PersonFacts({ person }: { person: User }) {
     ['Email', <a href={`mailto:${person.email}`}>{person.email}</a>],
     ['Emergency contact', person.emergency_contact || '—'],
     ['Joined', person.joining_date ? ukDay(ukNoon(person.joining_date.slice(0, 10)), { day: 'numeric', month: 'short', year: 'numeric' }) : '—'],
+    ...(person.keyholder ? [['Keyholder / access', person.keyholder] as [string, React.ReactNode]] : []),
+    ...(person.shift_pattern ? [['Shift pattern', person.shift_pattern] as [string, React.ReactNode]] : []),
+    ...(person.notes ? [['Internal notes', person.notes] as [string, React.ReactNode]] : []),
   ]
   return (
     <dl className="facts">

@@ -36,6 +36,9 @@ export interface User extends AuthUser {
   emergency_contact: string | null
   joining_date: string | null
   signup_details?: SignupDetails | null
+  keyholder?: string | null
+  shift_pattern?: string | null
+  notes?: string | null
 }
 
 export interface UserInput {
@@ -46,6 +49,9 @@ export interface UserInput {
   designation: Designation | ''
   emergency_contact: string
   joining_date: string
+  keyholder?: string
+  shift_pattern?: string
+  notes?: string
   password?: string
 }
 

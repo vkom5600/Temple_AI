@@ -27,6 +27,9 @@ export const validateUserBody = (body = {}, { requirePassword }) => {
         designation: clean(body.designation),
         emergency_contact: clean(body.emergency_contact),
         joining_date: clean(body.joining_date),
+        keyholder: clean(body.keyholder)?.slice(0, 160) ?? null,
+        shift_pattern: clean(body.shift_pattern)?.slice(0, 120) ?? null,
+        notes: clean(body.notes)?.slice(0, 2000) ?? null,
         password: typeof body.password === "string" && body.password !== ""
             ? body.password
             : null

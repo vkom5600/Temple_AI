@@ -84,6 +84,8 @@ const PAGES = [
   ['reports: activity log', '/admin/reports', 'raghu', ['desktop', 'tablet'], clickText('Activity log')],
   ['temple rules', '/admin/rules', 'raghu', ALL],
   ['temple rules: upload', '/admin/rules', 'raghu', ['desktop', 'phone'], clickText('Upload rules document')],
+  ['people: message someone', '/admin/people', 'raghu', ['desktop', 'phone'], `(async () => { ${clickSel('tr.prow')}; await new Promise((r) => setTimeout(r, 800)); [...document.querySelectorAll('.modal-foot button')].find((b) => b.textContent.includes('Message'))?.click() })()`],
+  ['people: remind not in yet', '/admin/people', 'raghu', ['desktop'], clickText('Remind')],
   ['people: committee access', '/admin/people', 'raghu', ['desktop', 'phone'], `[...document.querySelectorAll('tr.prow')].find((r) => r.textContent.includes('Meena'))?.click()`],
   ['attendance records', '/admin/attendance', 'raghu', ['desktop', 'tablet']],
   ['issue history', '/admin/issues', 'raghu', ['desktop', 'tablet']],
