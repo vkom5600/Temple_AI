@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAccess, requireFlag } from "../middleware/access.js";
 
 import {
     getMine,
@@ -30,7 +31,7 @@ router.post("/back", back);
 
 // Chairman and committee: Who's On, mark absent, correct any record
 router.get("/", authorizeRoles(...ADMIN_ROLES), getDay);
-router.put("/:userId/:date", authorizeRoles(...ADMIN_ROLES), upsertRecord);
-router.delete("/:userId/:date", authorizeRoles(...ADMIN_ROLES), deleteRecord);
+router.put("/:userId/:date", authorizeRoles(...ADMIN_ROLES), requireAccess("people", "manage"), upsertRecord);
+router.delete("/:userId/:date", authorizeRoles(...ADMIN_ROLES), requireAccess("people", "manage"), deleteRecord);
 
 export default router;

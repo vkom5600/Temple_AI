@@ -30,7 +30,7 @@ export const authenticateToken = async (req, res, next) => {
 
     const result = await pool.query(
         `SELECT u.id, u.full_name, u.email, u.role, u.phone, u.is_active, u.approval_status,
-                sp.designation
+                u.access, sp.designation
          FROM users u
          LEFT JOIN staff_profiles sp ON sp.user_id = u.id
          WHERE u.id = $1`,

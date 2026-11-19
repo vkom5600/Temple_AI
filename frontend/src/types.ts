@@ -11,6 +11,18 @@ export interface AuthUser {
   role: Role
   phone: string | null
   designation: Designation | null
+  access?: Access | null // committee per-area access (P2); null for staff and volunteers
+}
+
+export type AccessArea = 'tasks' | 'calendar' | 'people' | 'rules' | 'reports'
+export interface Access {
+  tasks: 'off' | 'view' | 'manage'
+  calendar: 'off' | 'view' | 'manage'
+  people: 'off' | 'view' | 'manage'
+  rules: 'off' | 'view' | 'manage'
+  reports: 'off' | 'view'
+  broadcast: boolean
+  ai: boolean
 }
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'

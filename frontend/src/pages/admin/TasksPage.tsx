@@ -13,6 +13,9 @@ import TaskForm from '../../components/tasks/TaskForm'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import type { Task } from '../../types'
 import RemindButton from '../../components/tasks/RemindButton'
+import { can, useAccess } from '../../lib/access'
+import ViewOnly from '../../components/ViewOnly'
+import { useAuth } from '../../auth/AuthContext'
 
 // T1 Tasks: Today, and T2 Upcoming / All (designs: screens/16_T1, 17_T2).
 // Assign work, track it, sign it off. Safety tasks need a second person.
@@ -26,6 +29,7 @@ const TABS: { id: Tab; label: string }[] = [
 const endOfToday = () => { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime() }
 
 export default function TasksPage() {
+  const access = useAccess()
   const toast = useToast()
   const { refreshSummary, openBroadcast } = useAdminContext()
   const [params, setParams] = useSearchParams()
@@ -93,12 +97,12 @@ export default function TasksPage() {
     <div className="page">
       <header className="page-head">
         <div>
-          <h1>Tasks</h1>
+          <h1>Tasks {!access.can('tasks', 'manage') && <ViewOnly />}</h1>
           <p>Assign work, track it, sign it off.</p>
         </div>
         <div className="head-actions">
-          <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>
-          <button className="btn btn-primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} /> New task</button>
+          {access.allowed('broadcast') && <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>}
+          {access.can('tasks', 'manage') && <button className="btn btn-primary" onClick={() => setCreating(true)}><Icon name="plus" size={16} /> New task</button>}
         </div>
       </header>
 
@@ -201,6 +205,7 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
   act: (action: () => Promise<{ message: string }>) => void
   showDay?: boolean
 }) {
+  const { user } = useAuth()
   const late = t.status === 'todo' && t.is_overdue
   const name = t.assigned_to_name
   const when = !t.due_at ? 'any time' : showDay ? fmtWhen(t.due_at) : `due ${fmtTime(t.due_at)}`
@@ -228,7 +233,7 @@ function TaskRow({ task: t, onOpen, act, showDay }: {
         {t.verified_by_name && <span className="tag tag-grn">2nd check ✓ {t.verified_by_name}</span>}
         {repeatLabel(t) && <span className="tag tag-ind">{repeatLabel(t)}</span>}
         {t.priority === 'high' && !t.requires_verification && <span className="tag tag-saf">High</span>}
-        {late ? (
+        {late && can(user, 'tasks', 'manage') ? (
           <RemindButton task={t} act={act} className="btn btn-outline btn-sm" />
         ) : t.status === 'awaiting_signoff' ? (
           <button className="btn btn-outline btn-sm" onClick={() => onOpen(t.id)}>Review</button>

@@ -7,9 +7,11 @@ import { DESIGNATION_LABELS, ROLE_GROUPS, ROLE_LABELS, jobLabel } from '../../co
 import { fmtTime, toDateInput } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Avatar, Badge, ErrorNote, Icon, Modal, Spinner } from '../../components/ui'
-import type { AttendanceDay, Designation, PresenceRow, Role, Task, User, UserInput } from '../../types'
+import type { AttendanceDay, Designation, PresenceRow, Role, Task, User, UserInput, Access } from '../../types'
 import { SignupsCard, SignupsDrawer } from './Registrations'
 import TaskDetails from '../../components/tasks/TaskDetails'
+import { AREA_INFO, DEFAULT_ACCESS, allowed, can } from '../../lib/access'
+import ViewOnly from '../../components/ViewOnly'
 
 const BLANK: UserInput = {
   full_name: '',
@@ -37,7 +39,10 @@ const toInput = (u: User): UserInput => ({
 // with today's attendance beside each name. Chairman adds, edits and approves sign-ups.
 export default function PeoplePage() {
   const { user: me } = useAuth()
-  const canEdit = me?.role === 'chairman'
+  const isChairman = me?.role === 'chairman'
+  // The chairman, or a committee member with People: Manage (staff and volunteers only)
+  const canEdit = can(me ?? null, 'people', 'manage')
+  const viewOnly = !canEdit
   const { openBroadcast } = useAdminContext()
   const [people, setPeople] = useState<User[] | null>(null)
   const [day, setDay] = useState<AttendanceDay | null>(null)
@@ -78,11 +83,11 @@ export default function PeoplePage() {
     <div className="page">
       <header className="page-head">
         <div>
-          <h1>People</h1>
+          <h1>People {viewOnly && <ViewOnly />}</h1>
           <p>Staff, volunteers and committee</p>
         </div>
         <div className="head-actions">
-          <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>
+          {allowed(me ?? null, 'broadcast') && <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>}
           {canEdit && <button className="btn btn-primary" onClick={() => setEditing('new')}><Icon name="plus" size={16} /> Add person</button>}
         </div>
       </header>
@@ -160,7 +165,8 @@ export default function PeoplePage() {
         <PersonForm
           presence={editing === 'new' ? undefined : presence.get(editing.id)}
           person={editing === 'new' ? null : editing}
-          canEdit={canEdit && (editing === 'new' || editing.role !== 'chairman')}
+          canEdit={editing === 'new' ? canEdit : isChairman ? editing.role !== 'chairman' : canEdit && (editing.role === 'staff' || editing.role === 'volunteer')}
+          isChairman={isChairman}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
@@ -184,7 +190,7 @@ function Presence({ row, active }: { row?: PresenceRow; active: boolean }) {
 
 // P2 Person details and edit / P3 Add person (designs: screens/28_P2).
 // Opens on the details; the ⋮ menu has Edit and Remove person (chairman only).
-function PersonForm({ person, presence, canEdit, onClose, onSaved }: { person: User | null; presence?: PresenceRow; canEdit: boolean; onClose: () => void; onSaved: () => void }) {
+function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }: { person: User | null; presence?: PresenceRow; canEdit: boolean; isChairman: boolean; onClose: () => void; onSaved: () => void }) {
   const toast = useToast()
   const [form, setForm] = useState<UserInput>(person ? toInput(person) : BLANK)
   const [error, setError] = useState('')
@@ -276,10 +282,10 @@ function PersonForm({ person, presence, canEdit, onClose, onSaved }: { person: U
                     <button role="menuitem" onClick={() => { setMenu(false); toggleActive() }}>
                       <Icon name={person.is_active ? 'lock' : 'key'} /> {person.is_active ? 'Switch off sign-in' : 'Switch sign-in back on'}
                     </button>
-                    <button role="menuitem" className="danger" onClick={() => { setMenu(false); setEditMode(false); setRemoving(true) }}><Icon name="trash" /> Remove person</button>
+                    {isChairman && <button role="menuitem" className="danger" onClick={() => { setMenu(false); setEditMode(false); setRemoving(true) }}><Icon name="trash" /> Remove person</button>}
                   </>
                 ) : (
-                  <p className="kebab-note">Only the chairman can edit or remove people.</p>
+                  <p className="kebab-note">{person.role === 'committee' || person.role === 'chairman' ? 'Only the chairman can change committee members.' : 'You can view people but not change them.'}</p>
                 )}
               </div>
             )}
@@ -335,7 +341,7 @@ function PersonForm({ person, presence, canEdit, onClose, onSaved }: { person: U
         <div className="field">
           <span className="ulabel">Group</span>
           <div className="segmented">
-            {(['staff', 'volunteer', 'committee'] as const).map((r) => (
+            {(isChairman ? ['staff', 'volunteer', 'committee'] as const : ['staff', 'volunteer'] as const).map((r) => (
               <button key={r} type="button" className={form.role === r ? 'on' : ''} onClick={() => set('role', r)}>{ROLE_LABELS[r]}</button>
             ))}
           </div>
@@ -368,6 +374,8 @@ function PersonForm({ person, presence, canEdit, onClose, onSaved }: { person: U
           </label>
         </div>
       </div>}
+
+      {person?.role === 'committee' && <AccessSection person={person} editable={isChairman} />}
 
       {person && (
         <div className={`status-bar ${person.is_active ? '' : 'off'}`}>
@@ -437,5 +445,43 @@ function PersonFacts({ person }: { person: User }) {
         <div key={label}><dt className="ulabel">{label}</dt><dd>{value}</dd></div>
       ))}
     </dl>
+  )
+}
+
+// P2 "What Meena can see and do": the chairman sets each committee member's access.
+// Saved straight away; the server checks it on every request.
+function AccessSection({ person, editable }: { person: User; editable: boolean }) {
+  const toast = useToast()
+  const [access, setAccess] = useState<Access>({ ...DEFAULT_ACCESS, ...(person.access ?? {}) })
+  const [busy, setBusy] = useState(false)
+  const first = person.full_name.split(' ')[0]
+  const save = async (next: Access) => {
+    const before = access
+    setAccess(next)
+    setBusy(true)
+    try { toast((await usersApi.setAccess(person.id, next)).message) } catch (err) { setAccess(before); toast((err as Error).message) } finally { setBusy(false) }
+  }
+  return (
+    <section className="dsec">
+      <div className="dsec-head"><span className="ulabel">What {first} can see and do</span><small className="muted">{editable ? 'Saved as you change it' : 'Set by the chairman'}</small></div>
+      {AREA_INFO.map((a) => (
+        <div key={a.area} className="access-row">
+          <span className="tile-ic ic-soft"><Icon name={a.icon} size={18} /></span>
+          <div className="grow"><b>{a.label}</b><span className="muted small">{a.hint}</span></div>
+          <div className="segmented seg-sm" role="radiogroup" aria-label={a.label}>
+            {a.levels.map((lv) => (
+              <button key={lv} type="button" role="radio" aria-checked={access[a.area] === lv} className={access[a.area] === lv ? 'on' : ''} disabled={!editable || busy}
+                onClick={() => access[a.area] !== lv && save({ ...access, [a.area]: lv })}>{lv[0].toUpperCase() + lv.slice(1)}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      {([['broadcast', 'Send broadcasts', 'Messages to staff and volunteers'], ['ai', 'Ask AI and Plan with AI', `Answers only use what ${first} can see`]] as const).map(([flag, label, hint]) => (
+        <div key={flag} className="access-row flag">
+          <div className="grow"><b>{label}</b><span className="muted small">{hint}</span></div>
+          <button className={`switch ${access[flag] ? 'on' : ''}`} role="switch" aria-checked={access[flag]} aria-label={label} disabled={!editable || busy} onClick={() => save({ ...access, [flag]: !access[flag] })}><span className="switch-knob" /></button>
+        </div>
+      ))}
+    </section>
   )
 }

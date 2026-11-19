@@ -7,6 +7,7 @@ import { useAdminContext } from '../../layouts/AdminLayout'
 import { useToast } from '../../components/Toast'
 import { ErrorNote, Icon, Spinner } from '../../components/ui'
 import type { AttendanceDay, AuditEntry, Booking, Issue, Task } from '../../types'
+import { useAccess } from '../../lib/access'
 
 // R1 Reports (Summary) and R2 Activity log (designs: screens/30_R1, 31_R2).
 // "How the temple is doing, and a record of every change."
@@ -24,7 +25,7 @@ export default function ReportsPage() {
           <h1>Reports</h1>
           <p>How the temple is doing, and a record of every change.</p>
         </div>
-        <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>
+        {useAccess().allowed('broadcast') && <button className="btn btn-outline" onClick={openBroadcast}><Icon name="send" size={16} /> Broadcast</button>}
       </header>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'summary'} className={`tab ${tab === 'summary' ? 'on' : ''}`} onClick={() => setTab('summary')}>Summary</button>

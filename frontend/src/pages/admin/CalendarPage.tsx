@@ -13,6 +13,8 @@ import type { Festival } from '../../types'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import { useAdminContext } from '../../layouts/AdminLayout'
 import type { Booking, Resource, Task } from '../../types'
+import { useAccess } from '../../lib/access'
+import ViewOnly from '../../components/ViewOnly'
 
 // C1 Calendar month, C3 Day opened (designs: screens/23_C1, 24_C3), and the
 // Allocation view the committee asked for (19 Nov): every hall and room down the
@@ -25,6 +27,7 @@ type View = 'month' | 'allocation'
 
 export default function CalendarPage() {
   const { refreshSummary } = useAdminContext()
+  const manage = useAccess().can('calendar', 'manage')
   const [view, setView] = useState<View>('month')
   const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); return d })
   const [day, setDay] = useState(() => new Date())
@@ -74,7 +77,7 @@ export default function CalendarPage() {
     <div className="page">
       <header className="page-head">
         <div>
-          <h1>Calendar</h1>
+          <h1>Calendar {!manage && <ViewOnly />}</h1>
           <p>Festivals, temple events and hall bookings</p>
         </div>
         <div className="head-actions">
@@ -82,8 +85,8 @@ export default function CalendarPage() {
             <Icon name="calendar" size={18} />
             <span><b>Google Calendar <i className="dot-off" /></b><small>Not connected yet · 2-way when keys are added</small></span>
           </span>
-          <button className="btn btn-outline btn-lg" onClick={() => setManagingFestivals(true)}><Icon name="diya" size={18} /> Festivals</button>
-          <button className="btn btn-primary btn-lg" onClick={() => setAdding({})}><Icon name="plus" size={18} /> Add to calendar</button>
+          {manage && <button className="btn btn-outline btn-lg" onClick={() => setManagingFestivals(true)}><Icon name="diya" size={18} /> Festivals</button>}
+          {manage && <button className="btn btn-primary btn-lg" onClick={() => setAdding({})}><Icon name="plus" size={18} /> Add to calendar</button>}
         </div>
       </header>
 
@@ -145,7 +148,7 @@ export default function CalendarPage() {
           })}
         </div>
       ) : (
-        <Allocation day={day} bookings={(bookings ?? []).filter(showBooking)} onOpen={setViewingBooking} onAdd={setAdding} onChanged={changed} />
+        <Allocation day={day} bookings={(bookings ?? []).filter(showBooking)} onOpen={setViewingBooking} onAdd={manage ? setAdding : () => {}} onChanged={changed} />
       )}
 
       {openDay && open && (

@@ -11,6 +11,8 @@ import BroadcastDialog from '../components/BroadcastDialog'
 import { Avatar, Icon, type IconName } from '../components/ui'
 import { Gopuram } from '../components/Ornaments'
 import PhoneNeedsYou from '../pages/admin/PhoneNeedsYou'
+import { allowed, can } from '../lib/access'
+import type { AccessArea } from '../types'
 import type { TaskSummary } from '../types'
 
 // Shared with admin pages through <Outlet context>: today's numbers, a refresh,
@@ -30,14 +32,16 @@ export const actionCount = (s: TaskSummary | null, isChairman: boolean) =>
   s ? s.overdue + s.open_issues + s.awaiting_signoff + s.pending_bookings + (isChairman ? s.pending_registrations : 0) : 0
 
 // The admin web app sidebar, as in the designs (H1, AC1, T1, C1, P1, R1).
-const NAV: { to: string; label: string; icon: IconName; action?: boolean }[] = [
+const NAV: { to: string; label: string; icon: IconName; action?: boolean; area?: AccessArea }[] = [
   { to: '/admin', label: 'Home', icon: 'grid' },
   { to: '/admin/action-center', label: 'Action Center', icon: 'bell', action: true },
-  { to: '/admin/tasks', label: 'Tasks', icon: 'check-circle' },
-  { to: '/admin/calendar', label: 'Calendar', icon: 'calendar' },
-  { to: '/admin/people', label: 'People', icon: 'users' },
-  { to: '/admin/reports', label: 'Reports', icon: 'chart' },
+  { to: '/admin/tasks', label: 'Tasks', icon: 'check-circle', area: 'tasks' },
+  { to: '/admin/calendar', label: 'Calendar', icon: 'calendar', area: 'calendar' },
+  { to: '/admin/people', label: 'People', icon: 'users', area: 'people' },
+  { to: '/admin/reports', label: 'Reports', icon: 'chart', area: 'reports' },
 ]
+// Pages that belong to an area (a committee member with that area Off sees a note instead)
+const PAGE_AREA: [string, AccessArea][] = [['/admin/tasks', 'tasks'], ['/admin/calendar', 'calendar'], ['/admin/people', 'people'], ['/admin/attendance', 'people'], ['/admin/reports', 'reports'], ['/admin/rules', 'rules'], ['/admin/issues', 'tasks']]
 
 const REFRESH_MS = 60_000
 const PHONE = '(max-width: 760px)'
@@ -87,7 +91,7 @@ export default function AdminLayout() {
   // ⌘K / Ctrl+K opens Ask AI, as in the design
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setAsking(true) }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && allowed(user, 'ai')) { e.preventDefault(); setAsking(true) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -127,7 +131,7 @@ export default function AdminLayout() {
           </div>
         </div>
         <nav aria-label="Main">
-          {NAV.map((item) => (
+          {NAV.filter((item) => !item.area || can(user, item.area)).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/admin'} className={({ isActive }) => `nav-item ${isActive ? 'on' : ''}`}>
               <Icon name={item.icon} size={20} />
               <span>{item.label}</span>
@@ -135,9 +139,9 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-        <button className="ask-ai" onClick={() => setAsking(true)}>
+        {allowed(user, 'ai') && <button className="ask-ai" onClick={() => setAsking(true)}>
           <span className="star">✦</span> <span className="grow" style={{ textAlign: 'left' }}>Ask AI</span> <kbd>⌘K</kbd>
-        </button>
+        </button>}
         <div className="sidebar-foot" ref={menuRef}>
           {menu && (
             <div className="me-menu" role="menu">
@@ -160,7 +164,12 @@ export default function AdminLayout() {
 
       <main className="admin-main">
         <Gopuram className="page-watermark" />
-        <Outlet context={context} />
+        {(() => {
+          const area = PAGE_AREA.find(([path]) => location.pathname.startsWith(path))?.[1]
+          return area && !can(user, area)
+            ? <div className="page"><div className="off-note"><Icon name="lock" size={22} /><div><b>This area is switched off for you</b><p>Ask the chairman if you need it.</p></div></div></div>
+            : <Outlet context={context} />
+        })()}
       </main>
       {panels}
     </div>

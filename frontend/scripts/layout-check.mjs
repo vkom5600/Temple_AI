@@ -78,6 +78,8 @@ const PAGES = [
   ['reports', '/admin/reports', 'raghu', ALL],
   ['reports: activity log', '/admin/reports', 'raghu', ['desktop', 'tablet'], clickText('Activity log')],
   ['temple rules', '/admin/rules', 'raghu', ALL],
+  ['temple rules: upload', '/admin/rules', 'raghu', ['desktop', 'phone'], clickText('Upload rules document')],
+  ['people: committee access', '/admin/people', 'raghu', ['desktop', 'phone'], `[...document.querySelectorAll('tr.prow')].find((r) => r.textContent.includes('Meena'))?.click()`],
   ['attendance records', '/admin/attendance', 'raghu', ['desktop', 'tablet']],
   ['issue history', '/admin/issues', 'raghu', ['desktop', 'tablet']],
   ['settings', '/admin/settings', 'raghu', ['desktop', 'tablet']],

@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAccess, requireFlag } from "../middleware/access.js";
 
 import {
     getIssues,
@@ -21,8 +22,8 @@ router.use(authenticateToken);
 router.post("/", reportIssue);
 
 // Chairman and committee handle them
-router.get("/", authorizeRoles(...ADMIN_ROLES), getIssues);
-router.patch("/:id/resolve", authorizeRoles(...ADMIN_ROLES), resolveIssue);
-router.post("/:id/convert", authorizeRoles(...ADMIN_ROLES), convertIssue);
+router.get("/", authorizeRoles(...ADMIN_ROLES), requireAccess("tasks", "view"), getIssues);
+router.patch("/:id/resolve", authorizeRoles(...ADMIN_ROLES), requireAccess("tasks", "manage"), resolveIssue);
+router.post("/:id/convert", authorizeRoles(...ADMIN_ROLES), requireAccess("tasks", "manage"), convertIssue);
 
 export default router;

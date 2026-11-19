@@ -5,11 +5,12 @@ import { notify } from "../services/notificationService.js";
 import { sendEmail } from "../services/emailService.js";
 import * as emails from "../services/emailTemplates.js";
 import { parseId, validateUserBody } from "../utils/userValidation.js";
+import { effectiveAccess, validateAccess } from "../middleware/access.js";
 
 const USER_COLUMNS = `
     u.id, u.full_name, u.email, u.role, u.phone, u.is_active,
     u.approval_status, u.reviewed_at, u.rejection_reason, u.created_at,
-    sp.designation, sp.emergency_contact, sp.joining_date
+    sp.designation, sp.emergency_contact, sp.joining_date, u.access
 `;
 
 const findUser = async (id, db = pool) => {
@@ -388,4 +389,17 @@ export const removeUser = async (req, res) => {
         open_tasks: n,
         message: `${result.rows[0].full_name} removed${n ? `. ${n} open task${n === 1 ? "" : "s"} still assigned to them need someone new` : ""}`
     });
+};
+
+// PUT /api/users/:id/access  (chairman)  P2 "What Meena can see and do"
+export const updateAccess = async (req, res) => {
+    const id = parseId(req.params.id);
+    const { data, error } = validateAccess(req.body ?? {});
+    if (error) return res.status(400).json({ success: false, message: error });
+    const target = (await pool.query("SELECT role, full_name FROM users WHERE id = $1 AND removed_at IS NULL", [id])).rows[0];
+    if (!target) return notFound(res);
+    if (target.role !== "committee") return res.status(400).json({ success: false, message: "Access per area is for committee members" });
+    await pool.query("UPDATE users SET access = $1 WHERE id = $2", [JSON.stringify(data), id]);
+    await logAudit({ actorId: req.user.id, action: "user.access_changed", entityType: "user", entityId: id, details: data });
+    res.json({ success: true, message: `${target.full_name}'s access saved`, access: effectiveAccess({ role: "committee", access: data }) });
 };

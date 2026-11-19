@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAccess, requireFlag } from "../middleware/access.js";
 
 import {
   createResource,
@@ -25,5 +26,5 @@ resourceRouter.put("/:id", authorizeRoles("chairman"), updateResource);
 export const ruleRouter = express.Router();
 ruleRouter.use(authenticateToken);
 ruleRouter.get("/", getRules);
-ruleRouter.post("/", authorizeRoles(...ADMIN_ROLES), createRule);
-ruleRouter.put("/:id", authorizeRoles(...ADMIN_ROLES), updateRule);
+ruleRouter.post("/", authorizeRoles(...ADMIN_ROLES), requireAccess("rules", "manage"), createRule);
+ruleRouter.put("/:id", authorizeRoles(...ADMIN_ROLES), requireAccess("rules", "manage"), updateRule);

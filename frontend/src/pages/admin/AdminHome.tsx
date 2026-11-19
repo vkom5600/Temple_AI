@@ -17,6 +17,7 @@ import { bookingsApi, festivalsApi } from '../../api/endpoints'
 import { bookingDay, bookingTimes } from '../../lib/bookings'
 import type { Booking, FestivalHome, ScheduleItem } from '../../types'
 import type { Issue, Task } from '../../types'
+import { useAccess } from '../../lib/access'
 
 // H1 Home (design: screens/01_H1_home.png): what needs attention and today at the mandir.
 // Phase 3 adds the Bookings card, Plan with AI and Broadcast; Phase 4 the festival reminders.
@@ -37,6 +38,7 @@ export default function AdminHome() {
   const [bookings, setBookings] = useState<Booking[] | null>(null)
   const [schedule, setSchedule] = useState<ScheduleItem[]>([])
   const [fest, setFest] = useState<FestivalHome | null>(null)
+  const access = useAccess()
   const loadToday = useCallback(() => {
     tasksApi.list({ view: 'today' }).then((r) => setToday(r.tasks)).catch(() => setToday([]))
     tasksApi.list({ view: 'open' }).then((r) => setUpcoming(r.tasks)).catch(() => {})
@@ -90,8 +92,8 @@ export default function AdminHome() {
           ))}
         </div>
         <div className="head-actions">
-          <button className="btn btn-primary btn-lg" onClick={() => openPlan()}><span className="star">✦</span> Plan with AI</button>
-          <button className="btn btn-outline btn-lg" onClick={openBroadcast}><Icon name="send" size={17} /> Broadcast</button>
+          {access.allowed('ai') && access.can('calendar', 'manage') && <button className="btn btn-primary btn-lg" onClick={() => openPlan()}><span className="star">✦</span> Plan with AI</button>}
+          {access.allowed('broadcast') && <button className="btn btn-outline btn-lg" onClick={openBroadcast}><Icon name="send" size={17} /> Broadcast</button>}
         </div>
       </header>
 
@@ -118,7 +120,7 @@ export default function AdminHome() {
             {fest.reminder.festival.name} is in {fest.reminder.days >= 14 ? `${Math.round(fest.reminder.days / 7)} weeks` : `${fest.reminder.days} day${fest.reminder.days === 1 ? '' : 's'}`}.
             {fest.reminder.last_time ? ` Last time you ran ${fest.reminder.last_time.tasks} tasks${fest.reminder.last_time.volunteers ? ` and ${fest.reminder.last_time.volunteers} volunteers` : ''}.` : ' Nothing is planned yet.'}
           </span>
-          <button className="btn btn-primary btn-sm" onClick={() => openPlan(`${fest.reminder!.festival.name} celebration, ${festDay(fest.reminder!.festival.date, true)}`)}>Plan it</button>
+          {access.allowed('ai') && access.can('calendar', 'manage') && <button className="btn btn-primary btn-sm" onClick={() => openPlan(`${fest.reminder!.festival.name} celebration, ${festDay(fest.reminder!.festival.date, true)}`)}>Plan it</button>}
           <button className="link-btn" onClick={() => festivalsApi.snooze(fest.reminder!.festival.id, 'week').then((r) => { toast(r.message); setFest({ ...fest, reminder: null }) }).catch(() => {})}>Later</button>
           <button className="link-btn muted" onClick={() => festivalsApi.snooze(fest.reminder!.festival.id, 'year').then((r) => { toast(r.message); setFest({ ...fest, reminder: null }) }).catch(() => {})}>Not this year</button>
         </div>

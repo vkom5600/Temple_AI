@@ -1,5 +1,6 @@
 
 import express from "express";
+import { requireAccess, requireFlag } from "../middleware/access.js";
 
 import {
   getNotifications,
@@ -21,7 +22,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // H3 Broadcast: chairman and committee message staff / volunteer phones
-router.post("/broadcast", authorizeRoles(...ADMIN_ROLES), sendBroadcast);
+router.post("/broadcast", authorizeRoles(...ADMIN_ROLES), requireFlag("broadcast"), sendBroadcast);
 
 // Get all notifications for the logged-in user
 router.get("/", getNotifications);

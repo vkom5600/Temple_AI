@@ -7,6 +7,7 @@ import { sendEmail, chairmanEmails } from "../services/emailService.js";
 import { getSetting, getSignupWindow } from "../services/settingsService.js";
 import * as emails from "../services/emailTemplates.js";
 import { validateUserBody } from "../utils/userValidation.js";
+import { effectiveAccess } from "../middleware/access.js";
 
 // Compared against when the email is unknown, so a wrong email and a
 // wrong password take the same time (doesn't reveal which emails exist).
@@ -18,7 +19,8 @@ const publicUser = (row) => ({
     email: row.email,
     role: row.role,
     phone: row.phone,
-    designation: row.designation
+    designation: row.designation,
+    access: effectiveAccess(row) // committee per-area access (null for staff and volunteers)
 });
 
 // Login / email work that shouldn't slow down the response.
@@ -131,7 +133,7 @@ export const login = async (req, res) => {
 
     const result = await pool.query(
         `SELECT u.id, u.full_name, u.email, u.password_hash, u.role, u.phone,
-                u.is_active, u.approval_status, u.rejection_reason, sp.designation
+                u.is_active, u.approval_status, u.rejection_reason, u.access, sp.designation
          FROM users u
          LEFT JOIN staff_profiles sp ON sp.user_id = u.id
          WHERE u.email = $1`,

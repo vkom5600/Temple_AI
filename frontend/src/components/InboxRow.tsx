@@ -8,6 +8,8 @@ import { assigneeLabel } from '../lib/tasks'
 import { Icon, rowClick } from './ui'
 import type { Issue, Role } from '../types'
 import RemindButton from './tasks/RemindButton'
+import { useAuth } from '../auth/AuthContext'
+import { can } from '../lib/access'
 
 type Action = () => Promise<{ message: string }>
 
@@ -33,6 +35,10 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
   act: (action: Action) => void
 }) {
   const { task, issue } = item
+  const { user } = useAuth()
+  // Committee members with View access see the row but not its buttons
+  const canAct = (i: InboxItem) =>
+    i.kind === 'booking' ? can(user, 'calendar', 'manage') : i.kind === 'signups' ? can(user, 'people', 'manage') : can(user, 'tasks', 'manage')
 
   if (item.kind === 'overdue' && task) {
     const mine = task.assigned_to === myId
@@ -56,7 +62,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
           ) : null}
         </div>
         {showWhen && <span className="inbox-when">Due {fmtTime(task.due_at)}</span>}
-        <div className="attn-actions">
+        <div className="attn-actions" hidden={!canAct(item)}>
           {mine ? (
             <button className="btn btn-outline" onClick={() => act(() => tasksApi.complete(task.id))}><Icon name="check" size={16} /> Mark done</button>
           ) : (
@@ -83,7 +89,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
           </div>
           <span className="hint hint-ind"><span className="star">✦</span> Suggest {helper ? `${first} (${jobName(issue)})` : jobName(issue)}</span>
         </div>
-        <div className="attn-actions">
+        <div className="attn-actions" hidden={!canAct(item)}>
           {helper ? (
             <button className="btn btn-saf-outline" onClick={() => act(() => issuesApi.convert(issue.id, quickTaskFor(issue, helper)))}>Assign {first}</button>
           ) : (
@@ -107,7 +113,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
           </div>
           <span className="hint hint-grn"><span className="star">✦</span> Safety task: needs a second person to check</span>
         </div>
-        <div className="attn-actions">
+        <div className="attn-actions" hidden={!canAct(item)}>
           <button className="btn btn-outline" onClick={() => onOpenTask(task.id)}>Review</button>
           {!own && <button className="btn btn-primary" onClick={() => act(() => tasksApi.verify(task.id))}>Sign off</button>}
         </div>
@@ -130,7 +136,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
           {check && <span className={`hint ${ok ? 'hint-grn' : 'hint-red'}`}><span className="star">✦</span> {ok ? `Fits all ${check.rules_total} rules · no clashes` : check.summary}</span>}
         </div>
         {showWhen && <span className="inbox-when">Asked {timeAgo(b.created_at)}</span>}
-        <div className="attn-actions">
+        <div className="attn-actions" hidden={!canAct(item)}>
           <button className="btn btn-outline" onClick={() => onOpenBooking(b.id)}>{ok ? 'Decline' : 'Review'}</button>
           <button className="btn btn-act" onClick={() => act(() => bookingsApi.approve(b.id))}>Approve</button>
         </div>
@@ -150,7 +156,7 @@ export default function InboxRow({ item, myId, showWhen, onOpenTask, onOpenBooki
           <div className="attn-name">{list.length === 1 ? `${list[0].full_name} wants to join` : `${list.length} people want to join`}</div>
           <div className="attn-meta"><span>{byRole.join(' · ')} · from the sign-up page</span></div>
         </div>
-        <div className="attn-actions">
+        <div className="attn-actions" hidden={!canAct(item)}>
           <Link to="/admin/people?review=signups" className="btn btn-primary">Review</Link>
         </div>
       </div>

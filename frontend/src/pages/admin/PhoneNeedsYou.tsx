@@ -18,6 +18,7 @@ import { bookingSlot } from '../../lib/bookings'
 import type { Task, TaskSummary } from '../../types'
 import HandledIssue from '../../components/HandledIssue'
 import RemindButton from '../../components/tasks/RemindButton'
+import { useAccess } from '../../lib/access'
 
 // AC1 Needs you (phone) – Rao garu's phone (designs: screens/42_AC1, final review p.12–13).
 // The same admin app, laid out for a phone: everything waiting, one button per card.
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export default function PhoneNeedsYou({ context }: Props) {
+  const access = useAccess()
   const { user, logout } = useAuth()
   const toast = useToast()
   const isChairman = user?.role === 'chairman'
@@ -86,8 +88,8 @@ export default function PhoneNeedsYou({ context }: Props) {
         )}
 
         <div className="m-actions">
-          <button className="btn btn-outline" onClick={context.openBroadcast}><Icon name="send" /> Broadcast</button>
-          <button className="btn btn-outline" onClick={context.openAskAi}><span className="star">✦</span> Ask AI</button>
+          {access.allowed('broadcast') && <button className="btn btn-outline" onClick={context.openBroadcast}><Icon name="send" /> Broadcast</button>}
+          {access.allowed('ai') && <button className="btn btn-outline" onClick={context.openAskAi}><span className="star">✦</span> Ask AI</button>}
         </div>
         <p className="fine">Tasks, Calendar, People and Reports are on the temple computer.</p>
         <button className="signout" onClick={logout}>Sign out</button>

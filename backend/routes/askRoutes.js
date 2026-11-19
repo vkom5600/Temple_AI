@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAccess, requireFlag } from "../middleware/access.js";
 import { ask, status } from "../controllers/askController.js";
 import { authenticateToken, authorizeRoles, ADMIN_ROLES } from "../middleware/authMiddleware.js";
 
@@ -6,5 +7,5 @@ import { authenticateToken, authorizeRoles, ADMIN_ROLES } from "../middleware/au
 const router = express.Router();
 router.use(authenticateToken, authorizeRoles(...ADMIN_ROLES));
 router.get("/status", status);
-router.post("/ask", ask);
+router.post("/ask", requireFlag("ai"), ask);
 export default router;

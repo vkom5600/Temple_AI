@@ -2,6 +2,7 @@
 import express from "express";
 
 import { getAuditLogs } from "../controllers/auditController.js";
+import { requireAccess } from "../middleware/access.js";
 
 import {
   authenticateToken,
@@ -16,6 +17,7 @@ router.use(authenticateToken);
 router.get(
   "/",
   authorizeRoles("chairman", "committee"),
+  requireAccess("reports", "view"),
   getAuditLogs
 );
 
