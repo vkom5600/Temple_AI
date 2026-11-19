@@ -10,7 +10,8 @@
     "db:seed": "node scripts/db.js seed",
     "db:reset": "node scripts/db.js reset",
     "create-admin": "node scripts/createChairman.js",
-    "test-overdue": "node scripts/testOverdueReminder.js"
+    "test-overdue": "node scripts/testOverdueReminder.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js"
   },
   "keywords": [],
   "author": "",

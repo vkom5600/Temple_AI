@@ -1,5 +1,8 @@
 import "./config/env.js";
 import express from "express";
+import path from "node:path";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import pool from "./config/db.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
@@ -26,7 +29,6 @@ import reportRoutes from "./routes/reportRoutes.js";
 import festivalRoutes from "./routes/festivalRoutes.js";
 import { resourceRouter, ruleRouter } from "./routes/resourceRoutes.js";
 // import calendarRoutes from "./routes/calendarRoutes.js";
-// import aiRoutes from "./routes/aiRoutes.js";
 // Phase 4
 import auditRoutes from "./routes/auditRoutes.js";
 import { startDailyReportJob } from "./jobs/dailyReportJob.js";
@@ -34,6 +36,8 @@ import { startOverdueReminderJob } from "./jobs/overdueReminderJob.js";
 
 const app = express();
 
+// Behind a host's proxy (Render etc.), use the visitor's real address for the sign-in rate limit
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 app.use(express.json({ limit: "100kb" }));
 
@@ -53,7 +57,6 @@ app.use("/api/ai", askRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/festivals", festivalRoutes);
 // app.use("/api/calendar", calendarRoutes);
-// app.use("/api/ai", aiRoutes);
 app.use("/api/audit-logs", auditRoutes);
 
 app.get("/api/health", async (req, res) => {
@@ -76,6 +79,15 @@ app.get("/api/health", async (req, res) => {
 });
 
 app.use("/api", notFound);
+
+// Hosting as one service: if the website has been built (frontend/dist), serve it
+// from here too, so one web address runs both. In development Vite serves it instead.
+const site = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "frontend", "dist");
+if (existsSync(path.join(site, "index.html"))) {
+    app.use(express.static(site, { maxAge: "1h", index: false }));
+    app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(site, "index.html")));
+}
+
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT) || 5000;
@@ -83,10 +95,10 @@ const PORT = Number(process.env.PORT) || 5000;
 app.listen(PORT, () => {
     console.log(`Temple AI API running on http://localhost:${PORT}`);
 
+    // Scheduled jobs (switched off for the automated tests: DISABLE_JOBS=1)
+    if (process.env.DISABLE_JOBS === "1") return;
     startRepeatingTasksJob();
     startClosingCheckJob();
-
-    // Phase 4
     startDailyReportJob();
     startOverdueReminderJob();
 });

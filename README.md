@@ -14,7 +14,7 @@ A web app for running the temple day to day:
 |---|---|---|
 | ![Home](docs/screenshots/02-home.jpg) | ![Staff phone](docs/screenshots/16-phone-staff.jpg) | ![Chairman phone](docs/screenshots/17-phone-chairman.jpg) |
 
-### Where we are (17 Nov 2026)
+### Where we are (19 Nov 2026)
 
 | Phase | What | Status |
 |---|---|---|
@@ -23,9 +23,10 @@ A web app for running the temple day to day:
 | 2 | Tasks (repeat, safety sign-off, no-deadline), problems, attendance (check in/out, last-person lock-up) | ✅ Done |
 | Design | Every Phase 1–2 screen built to the agreed Stitch designs. Also working: Broadcast, Calendar (month/day), Reports and Activity log, Ask AI (live-data preview), Rao garu's phone | ✅ Done |
 | 3 | Hall bookings (phone request + desk/tablet), Temple Rules, approval with prep tasks, allocation view | ✅ Done ([notes](docs/phases/phase-3-bookings.md)) |
-| 3b | Temple AI (Claude), Google Calendar two-way sync | ⏳ Next |
-| 4 | AI nightly report, festival Home, per-area committee access, sign-up link/QR | ⏳ |
-| 5 | Testing with the committee, deployment, release 1.0 | ⏳ |
+| 3b | Temple AI (Claude) for Ask AI, Plan with AI and the nightly report: built, switches on when an API key is added | ✅ Built (key to add) |
+| 4 | Plan with AI, sign-up window with link/QR, hourly reminders, nightly report, festival days, committee access per area, rules upload | ✅ Done (language choice waits on the committee) |
+| 5 | 19 automated API tests, 100-screen layout check, cleanup, one-service hosting ([DEPLOY](docs/DEPLOY.md)), [release notes](docs/RELEASE-NOTES.md) | ✅ Ready (hosting and the 1.0 tag need the committee) |
+| Later | Google Calendar sync (needs Google keys), SMS/WhatsApp broadcasts, phone languages | ⏳ |
 
 All screens: [docs/screenshots/](docs/screenshots/)
 
@@ -79,6 +80,9 @@ New people can also sign up at `/register`; the chairman approves or rejects the
 | `npm run db:migrate` | Applies any new files in `database/migrations/`. Run after pulling. |
 | `npm run db:seed` | Adds the demo accounts (skips ones that exist). |
 | `npm run db:reset` | **Wipes everything**, then migrates and seeds. Development only. |
+| `npm test` | Runs the 19 API tests on a separate test database (yours isn't touched). |
+
+In `frontend/`, `npm run check:layout` opens 100 screens at desktop, tablet and phone sizes and reports overlapping text, sideways scrolling, page errors and popups that fail to open.
 
 ## Working together
 
