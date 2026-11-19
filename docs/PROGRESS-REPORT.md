@@ -35,7 +35,7 @@
 
 ## 1b. Is it really working? (full-stack status, 19 Nov)
 
-**Designed pages: 47 in the site map.** Built and working on real data: **45**. Partly: **1** (M10 after leaving). Not started: **1** (M12 language, waiting on the committee). Updated 19 Nov evening.
+**Designed pages: 47 in the site map.** Built and working on real data: **44**. Partly: **2** (G3 settings: no temple timings yet; M10 after leaving: "I'm back" only). Not started: **1** (M12 language, waiting on the committee). Updated 19 Nov evening.
 
 | Status | Pages |
 |---|---|
