@@ -1,7 +1,8 @@
 # Temple AI – Operations & Management System
 **Ilford Hindu Centre · Vishwa Hindu Parishad (UK)**
 
-> ### 📋 Presenting today? Start with **[docs/PRESENTATION.md](docs/PRESENTATION.md)**
+> ### 📋 Where things stand: **[docs/CURRENT-WORK.md](docs/CURRENT-WORK.md)**
+> ### 📋 Presenting? Start with **[docs/PRESENTATION.md](docs/PRESENTATION.md)**
 > The script: what's built (with screenshots), what to say, what's next, and how to run and deploy it.
 > Full status by page: **[docs/PROGRESS-REPORT.md](docs/PROGRESS-REPORT.md)** · How it works: **[docs/HANDOVER.md](docs/HANDOVER.md)**
 
