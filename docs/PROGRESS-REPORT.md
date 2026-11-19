@@ -33,6 +33,35 @@
 
 ---
 
+## 1b. Is it really working? (full-stack status, 19 Nov)
+
+**Designed pages: 47 in the site map.** Built and working on real data: **36**. Partly: **4**. Not started: **7**.
+
+| Status | Pages |
+|---|---|
+| ✅ Built, real data (database → server → screen) | H1, H3, AC1, AC2, AC3, AC4, T1–T7, C1, C3, C4, P1, P2, P3, P5, R1, R2, G1, G2 · M1, M2, M3, M4, M5, M7, M8, M9, M11, M13 · W2, W3 · plus Rao garu's phone (AC1/AC2 phone) and the Allocation view |
+| ◐ Partly | AI1 Ask AI (answers common questions from live data; not Claude yet) · P4 sign-up window (open/close switch only; no dates, link or QR) · G3 settings (closing time, sign-up and login alerts; not temple timings or rooms) · M10 after leaving ("I'm back" only) |
+| ✗ Not started | H2 festival-day Home · AI2 Plan with AI · C2 week view · C5 event details · M6 ask a question · M12 language · W1 public hall form |
+
+**What "working" means, feature by feature:**
+
+| Feature | Saved in the database | Reaches people | Not yet |
+|---|---|---|---|
+| Sign-in, sign-ups, approval | ✅ | Email to the person and the chairman (*printed in the server log until SMTP email is set up*) | Text messages |
+| Tasks, repeats, sign-off, reminders | ✅ | App bell + the staff phone; reminders also by email | Push notifications when the app is closed; photos |
+| Problems / "I need help" | ✅ | Action Center + bell for the chairman and committee | Photos, voice notes |
+| Attendance, last person out | ✅ | Chairman told in the app + by email if lock-up is skipped | |
+| **Broadcast** | ✅ one message per person | **Shows in the bell and at the top of each staff phone ("Message from Raghu", urgent in red, Got it)** | **Not sent as SMS/WhatsApp/push: people see it when they open the app.** Sending to phones needs an SMS/WhatsApp provider (a cost decision) |
+| Bookings, rules, prep tasks | ✅ | Requester told in the app (+ email if they gave one); committee told of new requests | Google Calendar sync (needs the temple's Google keys) |
+| Reports, activity log | ✅ (worked out from the records) | On screen, copy as email, print to PDF | The nightly email to the committee |
+| Ask AI, suggestions, recommendations | Reads live data | On screen | **Claude** (needs an Anthropic API key): today they are rule-based |
+| Committee access per area (Off / View / Manage) | ✗ | | Phase 4 |
+| Deployment (online) | ✗ | | Phase 5 (plan in PRESENTATION.md §5) |
+
+**Checks we run:** typecheck and production build; API tests with curl for every phase; click-throughs in headless Chrome; and **`npm run check:layout`**, which opens every screen and popup at desktop, tablet and phone sizes and fails on overlapping text, sideways scrolling or page errors.
+
+---
+
 ## 2. What each screen does now (by page ID)
 
 ### Admin web app (chairman and committee)

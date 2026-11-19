@@ -305,6 +305,8 @@ These files exist from the first upload but are **not switched on** (`server.js`
 9. Push the branch; the other person reviews before it merges.
 
 ---
+- Before pushing UI changes: run the dev servers and `cd frontend && npm run check:layout` (add new screens to the list at the top of `frontend/scripts/layout-check.mjs`). It fails on overlapping text, sideways scrolling or page errors at desktop, tablet and phone sizes.
+
 
 ## 11. Working with Claude on this project (from the kickoff call)
 

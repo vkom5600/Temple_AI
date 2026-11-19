@@ -243,12 +243,13 @@ function TodaySchedule({ tasks, bookings, onOpen, onOpenBooking }: { tasks: Task
           {bookings.map((bk) => {
             const live = new Date(bk.starts_at).getTime() <= now && new Date(bk.ends_at).getTime() > now
             return (
-              <button key={bk.id} className={`sched-booking ${live ? 'live' : ''}`} onClick={() => onOpenBooking(bk.id)}>
-                {live && <i className="live-dot" />}
-                <b>{bookingTimes(bk)}</b>
-                <span className="grow">{bk.title}{live && <small>happening now</small>}</span>
+              <button key={bk.id} className={`sched-booking ${live ? 'is-live' : ''}`} onClick={() => onOpenBooking(bk.id)}>
+                <span className="sb-time">{live && <i className="live-dot" />}{bookingTimes(bk)}</span>
+                <span className="sb-main">
+                  <b>{bk.title}</b>
+                  <small>{bk.resource_name}{live && <em> · happening now</em>}</small>
+                </span>
                 <span className={`tag ${bk.kind === 'event' ? 'tag-grn' : 'tag-ind'}`}>{bk.kind === 'event' ? 'Event' : 'Booking'}</span>
-                <span className="sched-where">{bk.resource_name}</span>
               </button>
             )
           })}

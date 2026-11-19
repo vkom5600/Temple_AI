@@ -437,7 +437,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .glass-pill.past { opacity: .55; text-decoration: line-through; }
 .glass-btn { font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; background: #fff; color: var(--accent-ink); border-color: #fff; padding: 7px 16px; }
 .glass-btn:active { transform: scale(.97); }
-.live { width: 7px; height: 7px; border-radius: 50%; background: #9ef0b4; box-shadow: 0 0 0 3px rgba(158, 240, 180, .3); }
+/* (prototype) .live dot: scoped to <i>/<span> so a row with the class can't shrink */
+i.live, span.live { width: 7px; height: 7px; border-radius: 50%; background: #9ef0b4; box-shadow: 0 0 0 3px rgba(158, 240, 180, .3); }
 .day-quiet { opacity: .85; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: #d9cbbb; display: inline-block; flex: none; }
 .dot-on { background: var(--green); }
@@ -1257,12 +1258,14 @@ button.sched-what:hover { text-decoration: underline; }
 .alloc-block:hover { filter: brightness(1.08); }
 @media (max-width: 760px) { .booking-facts, .rules-grid { grid-template-columns: 1fr; } }
 .sched-bookings { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
-.sched-booking { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px 12px; text-align: left; font: inherit; color: var(--ind-d); cursor: pointer; }
+.sched-booking { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 10px 12px; text-align: left; font: inherit; color: var(--ind-d); cursor: pointer; }
 .sched-booking:hover { border-color: var(--ind); }
-.sched-booking b { font-variant-numeric: tabular-nums; font-size: 14px; white-space: nowrap; }
-.sched-booking .grow { font-weight: 500; min-width: 0; }
-.sched-booking small { display: block; color: var(--green); font-size: 12.5px; }
-.sched-booking.live { border-color: var(--green-line); background: #f6fbf5; }
+.sched-booking.is-live { border-color: var(--green-line); background: #f6fbf5; }
+.sb-time { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sb-main { min-width: 0; display: flex; flex-direction: column; }
+.sb-main b { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+.sb-main small { color: var(--muted); font-size: 13px; }
+.sb-main em { font-style: normal; color: var(--green); font-weight: 600; }
 .live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green-mid); box-shadow: 0 0 0 3px var(--green-soft); flex: none; }
 .kpi-box { display: flex; align-items: center; gap: 10px; background: #fdf9f1; border: 1px solid #f0e6d2; border-radius: 10px; padding: 12px 14px; color: var(--ind-d); font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
 .kpi-box svg { color: var(--saf); }
@@ -1346,3 +1349,11 @@ button.sched-what:hover { text-decoration: underline; }
 .choose:hover:not(:disabled) { border-color: var(--ind); }
 .choose:disabled { opacity: .5; cursor: not-allowed; }
 .choose svg { color: var(--ink-2); }
+
+/* Hidden native inputs behind custom ticks/choices: keep them inside their box
+   (a full-width absolute input made pages scroll sideways). */
+.check, .choice { position: relative; }
+.check input, .choice input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; min-height: 0; margin: 0; opacity: 0; pointer-events: none; }
+@media (max-width: 760px) { .mcal-today { display: none; } }
+/* Suggestion chips can wrap to two lines on narrow columns: softer corners read better */
+.hint { border-radius: 10px; line-height: 1.35; padding: 4px 12px; }
