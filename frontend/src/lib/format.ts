@@ -1,3 +1,5 @@
+import { ukAddDays, ukDateKey, ukDay, ukParts, ukSameDay, ukTime } from './uk'
+
 // "just now", "5 min ago", "3 hr ago", "2 days ago"
 export function timeAgo(iso: string): string {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
@@ -10,7 +12,7 @@ export function timeAgo(iso: string): string {
 }
 
 export const partOfDay = (): 'morning' | 'afternoon' | 'evening' | 'night' => {
-  const h = new Date().getHours()
+  const h = ukParts().h
   if (h < 5) return 'night'
   if (h < 12) return 'morning'
   if (h < 17) return 'afternoon'
@@ -22,24 +24,24 @@ export const greeting = (): string =>
   ({ morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Good night' })[partOfDay()]
 
 export const longDate = (date = new Date()): string =>
-  date.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
+  ukDay(date, { weekday: 'long', day: 'numeric', month: 'long' })
 
-const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+const sameDay = ukSameDay
 
 export const isToday = (iso: string | null) => !!iso && sameDay(new Date(iso), new Date())
 
 // null = a task with no deadline
-export const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Any time')
+export const fmtTime = (iso: string | null) => (iso ? ukTime(new Date(iso), { hour: 'numeric', minute: '2-digit' }) : 'Any time')
 
 // "Today", "Tomorrow", "Yesterday", or "Sat 31 Oct"
 export function fmtDay(iso: string | null): string {
   if (!iso) return 'Any day'
   const d = new Date(iso)
-  const offset = (days: number) => { const x = new Date(); x.setDate(x.getDate() + days); return x }
+  const offset = (days: number) => ukAddDays(new Date(), days)
   if (sameDay(d, offset(0))) return 'Today'
   if (sameDay(d, offset(1))) return 'Tomorrow'
   if (sameDay(d, offset(-1))) return 'Yesterday'
-  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+  return ukDay(d)
 }
 
 export const fmtWhen = (iso: string | null) => (iso ? `${fmtDay(iso)}, ${fmtTime(iso)}` : 'No deadline')
@@ -51,7 +53,6 @@ export function fmtInline(iso: string | null): string {
   return ['Today', 'Tomorrow', 'Yesterday'].includes(day) ? `${day.toLowerCase()} at ${fmtTime(iso)}` : `on ${day} at ${fmtTime(iso)}`
 }
 
-// Values for <input type="date"> and <input type="time"> in local time
-const pad = (n: number) => String(n).padStart(2, '0')
-export const toDateInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-export const toTimeInput = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
+// Values for <input type="date"> and <input type="time">, in UK time
+export const toDateInput = (d: Date) => ukDateKey(d)
+export const toTimeInput = (d: Date) => { const p = ukParts(d); return `${String(p.h).padStart(2, '0')}:${String(p.min).padStart(2, '0')}` }

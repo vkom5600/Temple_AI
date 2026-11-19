@@ -4,13 +4,14 @@ import { toDateInput } from '../lib/format'
 import { useToast } from './Toast'
 import { ErrorNote, Icon, Modal, Spinner } from './ui'
 import type { Festival } from '../types'
+import { ukDay, ukNoon } from '../lib/uk'
 
 // H2: the festival list behind the festival-day Home, the "Coming up" line and the
 // planning reminder. The committee keeps it; dates marked "to confirm" need checking
 // with the priest (the seeded examples start that way).
 
 const BLANK: FestivalInput = { name: '', subtitle: '', date: '', kind: 'festival', opens: '', closes: '', confirmed: true, remind: true }
-const nice = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+const nice = (d: string) => ukDay(ukNoon(d), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
 export default function FestivalsDialog({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }) {
   const toast = useToast()

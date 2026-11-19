@@ -18,6 +18,7 @@ import { bookingDay, bookingTimes } from '../../lib/bookings'
 import type { Booking, FestivalHome, ScheduleItem } from '../../types'
 import type { Issue, Task } from '../../types'
 import { useAccess } from '../../lib/access'
+import { ukAddDays, ukEndOfDay, ukNoon, ukSameDay, ukStartOfDay, ukTime, ukDay } from '../../lib/uk'
 
 // H1 Home (design: screens/01_H1_home.png): what needs attention and today at the mandir.
 // Phase 3 adds the Bookings card, Plan with AI and Broadcast; Phase 4 the festival reminders.
@@ -42,8 +43,8 @@ export default function AdminHome() {
   const loadToday = useCallback(() => {
     tasksApi.list({ view: 'today' }).then((r) => setToday(r.tasks)).catch(() => setToday([]))
     tasksApi.list({ view: 'open' }).then((r) => setUpcoming(r.tasks)).catch(() => {})
-    const from = new Date(); from.setHours(0, 0, 0, 0)
-    const to = new Date(from); to.setDate(to.getDate() + 60)
+    const from = ukStartOfDay()
+    const to = ukAddDays(from, 60)
     bookingsApi.list({ from: from.toISOString(), to: to.toISOString() }).then((r) => setBookings(r.bookings)).catch(() => setBookings([]))
     bookingsApi.schedule().then((r) => setSchedule(r.bookings)).catch(() => {})
     festivalsApi.home().then(setFest).catch(() => {})
@@ -67,7 +68,7 @@ export default function AdminHome() {
   const tip = topTip(items)
   const waiting = actionCount(summary, isChairman)
   const nextTask = today?.filter((t) => t.status === 'todo' && t.due_at && dueMs(t) > Date.now()).sort(byDue)[0]
-  const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999)
+  const endOfToday = ukEndOfDay()
   const comingUp = upcoming.filter((t) => t.due_at && dueMs(t) > endOfToday.getTime()).sort(byDue)[0]
 
   return (
@@ -186,7 +187,7 @@ export default function AdminHome() {
 // H1 "Bookings" card: today's bookings, the next one, and requests waiting.
 function BookingsCard({ bookings, waiting, onOpen }: { bookings: Booking[] | null; waiting: number; onOpen: (id: number) => void }) {
   const confirmed = (bookings ?? []).filter((b) => b.status === 'approved')
-  const today = confirmed.filter((b) => new Date(b.starts_at).toDateString() === new Date().toDateString())
+  const today = confirmed.filter((b) => ukSameDay(new Date(b.starts_at), new Date()))
   const next = confirmed.find((b) => new Date(b.starts_at) > new Date())
   const pending = (bookings ?? []).filter((b) => b.status === 'pending')
   return (
@@ -247,7 +248,7 @@ function TodaySchedule({ tasks, bookings, onOpen, onOpenBooking }: { tasks: Task
     const mins = Math.round((new Date(iso).getTime() - now) / 60000)
     return mins < 60 ? `in ${mins} min` : `in ${Math.floor(mins / 60)}h ${mins % 60}m`
   }
-  const nowLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  const nowLabel = ukTime(new Date())
 
   const row = (t: Task) => {
     const past = dueMs(t) <= now
@@ -314,4 +315,4 @@ function TodaySchedule({ tasks, bookings, onOpen, onOpenBooking }: { tasks: Task
 
 // "Sun 16 Nov" (with the year for Plan with AI, so it never guesses)
 const festDay = (date: string, withYear = false) =>
-  new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) })
+  ukDay(ukNoon(date), { weekday: 'short', day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) })

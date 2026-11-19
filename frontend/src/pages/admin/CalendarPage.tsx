@@ -15,13 +15,14 @@ import { useAdminContext } from '../../layouts/AdminLayout'
 import type { Booking, Resource, Task } from '../../types'
 import { useAccess } from '../../lib/access'
 import ViewOnly from '../../components/ViewOnly'
+import { ukAddDays, ukDate, ukDateKey, ukDay, ukParts, ukSameDay } from '../../lib/uk'
 
 // C1 Calendar month, C3 Day opened (designs: screens/23_C1, 24_C3), and the
 // Allocation view the committee asked for (19 Nov): every hall and room down the
 // side, the day across, so the office can see and allocate space at a glance.
 // Google Calendar two-way sync switches on once the temple's Google keys are added.
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+const dayKey = (d: Date) => ukDateKey(d)
 type Filter = 'all' | 'bookings' | 'events' | 'waiting' | 'tasks'
 type View = 'month' | 'allocation'
 
@@ -29,7 +30,8 @@ export default function CalendarPage() {
   const { refreshSummary } = useAdminContext()
   const manage = useAccess().can('calendar', 'manage')
   const [view, setView] = useState<View>('month')
-  const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); return d })
+  // month = the 1st of the month at UK noon; day = any moment on the chosen UK day
+  const [month, setMonth] = useState(() => { const p = ukParts(); return ukDate(p.y, p.m, 1, 12) })
   const [day, setDay] = useState(() => new Date())
   const [bookings, setBookings] = useState<Booking[] | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -43,8 +45,10 @@ export default function CalendarPage() {
 
   // Load a little either side of what's on screen.
   const load = useCallback(() => {
-    const from = new Date(view === 'month' ? month : day); from.setDate(from.getDate() - 7)
-    const to = new Date(view === 'month' ? month : day); to.setMonth(to.getMonth() + 1); to.setDate(to.getDate() + 7)
+    const ref = view === 'month' ? month : day
+    const r = ukParts(ref)
+    const from = ukDate(r.y, r.m, r.d - 7)
+    const to = ukDate(r.y, r.m + 1, r.d + 7)
     bookingsApi.list({ from: from.toISOString(), to: to.toISOString() })
       .then((r) => setBookings(r.bookings.filter((b) => b.status === 'approved' || b.status === 'pending')))
       .catch(() => setBookings([]))
@@ -64,12 +68,14 @@ export default function CalendarPage() {
   for (const b of (bookings ?? []).filter(showBooking)) slot(dayKey(new Date(b.starts_at))).b.push(b)
   for (const t of [...shownTasks].sort(byDue)) slot(dayKey(new Date(t.due_at!))).t.push(t)
 
-  const start = new Date(month); start.setDate(1 - ((month.getDay() + 6) % 7))
-  const weeks = Math.ceil((((month.getDay() + 6) % 7) + new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) / 7)
-  const days = Array.from({ length: weeks * 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d })
+  const mp = ukParts(month)
+  const lead = (mp.wd + 6) % 7 // blank days before the 1st (weeks start on Monday)
+  const daysInMonth = ukParts(ukDate(mp.y, mp.m + 1, 0, 12)).d
+  const weeks = Math.ceil((lead + daysInMonth) / 7)
+  const days = Array.from({ length: weeks * 7 }, (_, i) => ukDate(mp.y, mp.m, 1 - lead + i, 12))
   const today = dayKey(new Date())
-  const shiftMonth = (n: number) => setMonth((m) => { const d = new Date(m); d.setMonth(d.getMonth() + n); return d })
-  const shiftDay = (n: number) => setDay((x) => { const d = new Date(x); d.setDate(d.getDate() + n); return d })
+  const shiftMonth = (n: number) => setMonth((m) => { const p = ukParts(m); return ukDate(p.y, p.m + n, 1, 12) })
+  const shiftDay = (n: number) => setDay((x) => ukAddDays(x, n))
   const open = openDay ? byDay.get(dayKey(openDay)) ?? { b: [], t: [] } : null
   const waiting = (bookings ?? []).filter((b) => b.status === 'pending').length
 
@@ -94,17 +100,17 @@ export default function CalendarPage() {
         {view === 'month' ? (
           <div className="month-nav">
             <button className="icon-btn" onClick={() => shiftMonth(-1)} aria-label="Previous month"><Icon name="chevron-right" size={18} /></button>
-            <b>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</b>
+            <b>{ukDay(month, { month: 'long', year: 'numeric' })}</b>
             <button className="icon-btn" onClick={() => shiftMonth(1)} aria-label="Next month"><Icon name="chevron-right" size={18} /></button>
           </div>
         ) : (
           <div className="month-nav">
             <button className="icon-btn" onClick={() => shiftDay(-1)} aria-label="Previous day"><Icon name="chevron-right" size={18} /></button>
-            <b>{day.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'long' })}</b>
+            <b>{ukDay(day, { weekday: 'short', day: 'numeric', month: 'long' })}</b>
             <button className="icon-btn" onClick={() => shiftDay(1)} aria-label="Next day"><Icon name="chevron-right" size={18} /></button>
           </div>
         )}
-        <button className="btn btn-outline" onClick={() => { const d = new Date(); setDay(d); const m = new Date(); m.setDate(1); setMonth(m) }}>Today</button>
+        <button className="btn btn-outline" onClick={() => { setDay(new Date()); const p = ukParts(); setMonth(ukDate(p.y, p.m, 1, 12)) }}>Today</button>
         <div className="cal-filters">
           <button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>All</button>
           <button className={filter === 'bookings' ? 'on' : ''} onClick={() => setFilter('bookings')}><i className="lg lg-ind" /> Bookings</button>
@@ -121,7 +127,7 @@ export default function CalendarPage() {
       {!bookings && <Spinner />}
 
       {view === 'month' ? (
-        <div className="mcal" role="grid" aria-label={month.toLocaleDateString([], { month: 'long', year: 'numeric' })}>
+        <div className="mcal" role="grid" aria-label={ukDay(month, { month: 'long', year: 'numeric' })}>
           {WEEKDAYS.map((w) => <div key={w} className="mcal-wd" role="columnheader">{w}</div>)}
           {days.map((d) => {
             const items = byDay.get(dayKey(d)) ?? { b: [], t: [] }
@@ -132,12 +138,12 @@ export default function CalendarPage() {
             return (
               <button
                 key={d.toISOString()}
-                className={`mcal-day ${d.getMonth() !== month.getMonth() ? 'out' : ''} ${isToday ? 'today' : ''}`}
+                className={`mcal-day ${ukParts(d).m !== mp.m ? 'out' : ''} ${isToday ? 'today' : ''}`}
                 onClick={() => setOpenDay(d)}
-                aria-label={`${d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}, ${all.length} items`}
+                aria-label={`${ukDay(d, { weekday: 'long', day: 'numeric', month: 'long' })}, ${all.length} items`}
               >
                 <span className="mcal-top">
-                  <span className="mcal-num">{d.getDate()}</span>
+                  <span className="mcal-num">{ukParts(d).d}</span>
                   {isToday && <span className="mcal-today">Today</span>}
                 </span>
                 {festivals.filter((f) => f.date === toDateInput(d)).map((f) => <span key={`f${f.id}`} className={`mcal-fest ${f.confirmed ? '' : 'tbc'}`} title={f.confirmed ? f.name : `${f.name} (date to confirm)`}>{f.name}</span>)}
@@ -153,12 +159,12 @@ export default function CalendarPage() {
 
       {openDay && open && (
         <Modal
-          title={openDay.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'long' })}
+          title={ukDay(openDay, { weekday: 'short', day: 'numeric', month: 'long' })}
           onClose={() => setOpenDay(null)}
           head={
             <div className="grow">
               <h2 className="row" style={{ gap: 12 }}>
-                {openDay.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'long' })}
+                {ukDay(openDay, { weekday: 'short', day: 'numeric', month: 'long' })}
                 {dayKey(openDay) === today && <span className="saf-chip">Today</span>}
               </h2>
               <p className="modal-sub">{open.b.length || open.t.length ? `${open.b.length} booking${open.b.length === 1 ? '' : 's'} · ${open.t.length} task${open.t.length === 1 ? '' : 's'}` : 'Nothing on this day yet'}</p>
@@ -166,7 +172,7 @@ export default function CalendarPage() {
           }
           footer={
             <>
-              <button className="link-arrow push-left" onClick={() => { setAdding({ date: toDateInput(openDay) }); setOpenDay(null) }}><Icon name="plus" size={16} /> Add on {openDay.toLocaleDateString([], { day: 'numeric', month: 'long' })}</button>
+              <button className="link-arrow push-left" onClick={() => { setAdding({ date: toDateInput(openDay) }); setOpenDay(null) }}><Icon name="plus" size={16} /> Add on {ukDay(openDay, { day: 'numeric', month: 'long' })}</button>
               <button className="btn btn-outline" onClick={() => { setDay(openDay); setView('allocation'); setOpenDay(null) }}><Icon name="grid" size={16} /> See allocation</button>
             </>
           }
@@ -206,7 +212,8 @@ const FIRST_HOUR = 7
 const LAST_HOUR = 23
 const HOURS = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, i) => FIRST_HOUR + i)
 const pct = (date: Date, ref: Date) => {
-  const startOfGrid = new Date(ref); startOfGrid.setHours(FIRST_HOUR, 0, 0, 0)
+  const r = ukParts(ref)
+  const startOfGrid = ukDate(r.y, r.m, r.d, FIRST_HOUR)
   const mins = (date.getTime() - startOfGrid.getTime()) / 60000
   return Math.min(100, Math.max(0, (mins / ((LAST_HOUR - FIRST_HOUR) * 60)) * 100))
 }
@@ -224,10 +231,11 @@ function Allocation({ day, bookings, onOpen, onAdd, onChanged }: {
   const loadResources = () => { resourcesApi.list().then((r) => setResources(r.resources)).catch(() => setResources([])) }
   useEffect(loadResources, [])
 
-  const sameDay = (iso: string) => new Date(iso).toDateString() === day.toDateString()
+  const sameDay = (iso: string) => ukSameDay(new Date(iso), day)
   const todays = bookings.filter((b) => sameDay(b.starts_at) || sameDay(b.ends_at))
   const now = new Date()
-  const showNow = now.toDateString() === day.toDateString() && now.getHours() >= FIRST_HOUR && now.getHours() < LAST_HOUR
+  const nowHour = ukParts(now).h
+  const showNow = ukSameDay(now, day) && nowHour >= FIRST_HOUR && nowHour < LAST_HOUR
   const busy = new Set(todays.map((b) => b.resource_id))
 
   // Click an empty part of a row: book that space from the nearest hour, for two hours.
@@ -242,7 +250,7 @@ function Allocation({ day, bookings, onOpen, onAdd, onChanged }: {
   return (
     <section className="alloc">
       <div className="alloc-summary">
-        <span><b>{busy.size}</b> of {resources?.length ?? '…'} spaces in use on {day.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' })}</span>
+        <span><b>{busy.size}</b> of {resources?.length ?? '…'} spaces in use on {ukDay(day, { weekday: 'long', day: 'numeric', month: 'short' })}</span>
         <span className="row muted small" style={{ gap: 14 }}>
           <span className="row" style={{ gap: 6 }}><i className="alloc-key" /> Confirmed</span>
           <span className="row" style={{ gap: 6 }}><i className="alloc-key wait" /> Waiting</span>

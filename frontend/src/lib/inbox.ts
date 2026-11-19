@@ -3,6 +3,7 @@ import { attendanceApi, bookingsApi, issuesApi, tasksApi, usersApi } from '../ap
 import { TASK_GROUP_LABELS } from '../constants'
 import { suggestGroup, suggestedTitle } from './tasks'
 import type { AttendanceDay, BookingDetail, Issue, Task, TaskInput, User } from '../types'
+import { ukSameDay } from './uk'
 
 // Everything waiting for the chairman / committee, in one list.
 // Used by H1 Home ("Needs your attention") and AC1 Action Center, so both agree.
@@ -34,7 +35,7 @@ export interface Inbox {
   handledToday: Issue[]
 }
 
-const isTodayIso = (iso: string | null) => !!iso && new Date(iso).toDateString() === new Date().toDateString()
+const isTodayIso = (iso: string | null) => !!iso && ukSameDay(new Date(iso), new Date())
 
 export function useInbox(isChairman: boolean) {
   const [inbox, setInbox] = useState<Inbox | null>(null)

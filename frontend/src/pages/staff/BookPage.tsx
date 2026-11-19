@@ -7,6 +7,7 @@ import { toIso } from '../../lib/bookings'
 import { toDateInput } from '../../lib/format'
 import { ErrorNote, Icon, Spinner } from '../../components/ui'
 import type { Resource, TempleRule } from '../../types'
+import { ukAddDays } from '../../lib/uk'
 
 // M7 Request a booking (design: screens/38_M7, final review p.25): the phone booking.
 // The person ticks every Temple Rule before Send unlocks ("4 of 6 agreed"); the request
@@ -16,7 +17,7 @@ export default function BookPage() {
   const navigate = useNavigate()
   const [resources, setResources] = useState<Resource[] | null>(null)
   const [rules, setRules] = useState<TempleRule[]>([])
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrow = ukAddDays(new Date(), 1)
   const [f, setF] = useState({
     title: '', resource_id: 0, date: toDateInput(tomorrow), start: '14:00', end: '18:00', guests: '',
     food: true, contact_name: user?.full_name ?? '', contact_phone: user?.phone ?? '',

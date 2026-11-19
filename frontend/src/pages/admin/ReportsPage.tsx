@@ -8,6 +8,7 @@ import { useToast } from '../../components/Toast'
 import { ErrorNote, Icon, Spinner } from '../../components/ui'
 import type { AttendanceDay, AuditEntry, Booking, Issue, Task } from '../../types'
 import { useAccess } from '../../lib/access'
+import { ukAddDays, ukDate, ukDateKey, ukDay, ukEndOfDay, ukParts, ukSameDay, ukStartOfDay, ukTime } from '../../lib/uk'
 
 // R1 Reports (Summary) and R2 Activity log (designs: screens/30_R1, 31_R2).
 // "How the temple is doing, and a record of every change."
@@ -39,29 +40,29 @@ export default function ReportsPage() {
 // ---------------------------------------------------------------- R1 Summary
 
 type Span = 'daily' | 'weekly' | 'monthly'
-const DAY = 86_400_000
 
 function periodOf(span: Span, offset: number): { from: Date; to: Date; label: string } {
-  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const today = ukStartOfDay()
+  const t = ukParts(today)
   if (span === 'daily') {
-    const from = new Date(today.getTime() + offset * DAY)
-    return { from, to: from, label: from.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) }
+    const from = ukAddDays(today, offset)
+    return { from, to: from, label: ukDay(from) }
   }
   if (span === 'weekly') {
-    const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7) + offset * 7)
-    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6)
-    const f = (d: Date) => d.toLocaleDateString([], { day: 'numeric', month: 'short' })
+    const monday = ukAddDays(today, -((t.wd + 6) % 7) + offset * 7)
+    const sunday = ukAddDays(monday, 6)
+    const f = (d: Date) => ukDay(d, { day: 'numeric', month: 'short' })
     return { from: monday, to: sunday, label: `${f(monday)} – ${f(sunday)}` }
   }
-  const from = new Date(today.getFullYear(), today.getMonth() + offset, 1)
-  const to = new Date(today.getFullYear(), today.getMonth() + offset + 1, 0)
-  return { from, to, label: from.toLocaleDateString([], { month: 'long', year: 'numeric' }) }
+  const from = ukDate(t.y, t.m + offset, 1)
+  const to = ukDate(t.y, t.m + offset + 1, 0)
+  return { from, to, label: ukDay(from, { month: 'long', year: 'numeric' }) }
 }
 
 const inRange = (iso: string | null, from: Date, to: Date) => {
   if (!iso) return false
   const t = new Date(iso).getTime()
-  return t >= from.getTime() && t < to.getTime() + DAY
+  return t >= from.getTime() && t <= ukEndOfDay(to).getTime()
 }
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0)
 
@@ -84,7 +85,7 @@ function Summary() {
     Promise.all([issuesApi.list('open'), issuesApi.list('handled')]).then(([a, b]) => setIssues([...a.issues, ...b.issues])).catch(() => {})
     // Attendance for each day of the period up to today
     const list: string[] = []
-    for (const d = new Date(period.from); d <= period.to && d <= new Date(); d.setDate(d.getDate() + 1)) list.push(toDateInput(d))
+    for (let d = period.from; ukDateKey(d) <= ukDateKey(period.to) && ukDateKey(d) <= ukDateKey(new Date()); d = ukAddDays(d, 1)) list.push(toDateInput(d))
     setDays(null)
     bookingsApi.list({ from: toDateInput(period.from), to: toDateInput(period.to) }).then((r) => setBookings(r.bookings)).catch(() => setBookings([]))
     // A finished day has a nightly report (written at 00:05)
@@ -188,8 +189,8 @@ function Summary() {
           <div className="grow">
             <h2>{title}</h2>
             <span className="muted small">{nightly
-              ? <>Nightly report · written by {nightly.written_by_label} · {new Date(nightly.created_at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, {new Date(nightly.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</>
-              : <>Made from the records · {made.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}, {made.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</>}</span>
+              ? <>Nightly report · written by {nightly.written_by_label} · {ukDay(new Date(nightly.created_at))}, {ukTime(new Date(nightly.created_at))}</>
+              : <>Made from the records · {ukDay(made)}, {ukTime(made)}</>}</span>
           </div>
           <div className="row no-print">
             <button className="btn btn-outline btn-sm" disabled={writing} onClick={pastDay ? writeNightly : load}><Icon name="repeat" size={14} /> {writing ? 'Writing…' : 'Regenerate'}</button>
@@ -283,10 +284,10 @@ function describe(a: AuditEntry): ReactNode {
 }
 
 function dayLabel(iso: string) {
-  const d = new Date(iso); const t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1)
-  if (d.toDateString() === t.toDateString()) return 'Today'
-  if (d.toDateString() === y.toDateString()) return 'Yesterday'
-  return d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
+  const d = new Date(iso)
+  if (ukSameDay(d, new Date())) return 'Today'
+  if (ukSameDay(d, ukAddDays(new Date(), -1))) return 'Yesterday'
+  return ukDay(d, { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 function ActivityLog() {
@@ -339,7 +340,7 @@ function ActivityLog() {
             <span className="ulabel">{label}</span>
             {list.map((a) => (
               <div key={a.id} className="log-row">
-                <time>{new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</time>
+                <time>{ukTime(new Date(a.created_at))}</time>
                 <span className="grow">{describe(a)}</span>
                 {a.entity_type && <span className="log-tag">{TAG[a.entity_type] ?? a.entity_type}</span>}
               </div>

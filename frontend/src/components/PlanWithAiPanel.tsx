@@ -5,6 +5,7 @@ import { toDateInput, toTimeInput } from '../lib/format'
 import { useToast } from './Toast'
 import { ErrorNote, Icon, Modal, type IconName } from './ui'
 import type { PlanDraft, PlanEvent, PlanNote, PlanTask, Resource, TaskGroup, User } from '../types'
+import { ukDay, ukFromInputs, ukTime } from '../lib/uk'
 
 // AI2 Plan with AI (designs: screens/07 chat, 08 draft plan, 09 plan from last year).
 //  07: describe the event; it asks what's missing, flags rule problems, and offers
@@ -27,9 +28,9 @@ const IDEAS = [
 ]
 
 // Dates and times as in the designs: "Sat 14 Nov", "18:00"
-const dayLabel = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-const join = (date: string, time: string) => new Date(`${date}T${time}`).toISOString()
+const dayLabel = (iso: string) => ukDay(new Date(iso))
+const hhmm = (iso: string) => ukTime(new Date(iso))
+const join = (date: string, time: string) => ukFromInputs(date, time).toISOString()
 const whoKey = (t: Pick<PlanTask, 'assigned_to' | 'assigned_group'>) => (t.assigned_group ? `group:${t.assigned_group}` : `user:${t.assigned_to}`)
 const strip = ({ section: _s, picked: _p, ...t }: SuggestedTask): PlanTask => t
 

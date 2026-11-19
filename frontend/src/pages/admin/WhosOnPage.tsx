@@ -6,6 +6,7 @@ import { fmtTime, toDateInput, toTimeInput } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Avatar, Badge, ErrorNote, Icon, Modal, Spinner } from '../../components/ui'
 import type { AttendanceDay, PresenceRow, PresenceState } from '../../types'
+import { ukAddDays, ukDay, ukFromInputs, ukNoon } from '../../lib/uk'
 
 const STATE: Record<PresenceState, { label: string; tone: 'green' | 'neutral' | 'amber' | 'red' }> = {
   here: { label: 'Here', tone: 'green' },
@@ -15,13 +16,11 @@ const STATE: Record<PresenceState, { label: string; tone: 'green' | 'neutral' | 
 }
 
 const shiftDate = (date: string, days: number) => {
-  const d = new Date(`${date}T12:00:00`)
-  d.setDate(d.getDate() + days)
-  return toDateInput(d)
+  return toDateInput(ukAddDays(ukNoon(date), days))
 }
 
 const longDay = (date: string) =>
-  new Date(`${date}T12:00:00`).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
+  ukDay(ukNoon(date), { weekday: 'long', day: 'numeric', month: 'long' })
 
 // Chairman / committee: who came in on a day, gaps, closing checks.
 // Mark someone absent or correct any record.
@@ -179,7 +178,7 @@ function RecordEditor({ row, date, onClose, onSaved }: { row: PresenceRow; date:
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const iso = (time: string) => (time ? new Date(`${date}T${time}`).toISOString() : null)
+  const iso = (time: string) => (time ? ukFromInputs(date, time).toISOString() : null)
 
   const run = async (action: () => Promise<{ message: string }>) => {
     setError('')

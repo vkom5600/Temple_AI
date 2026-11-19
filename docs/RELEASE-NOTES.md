@@ -44,7 +44,7 @@ volunteers on their phones.
   native speakers to check the translations.
 - **Google Calendar two-way sync:** code is ready; needs the temple's Google keys.
 - **SMS / WhatsApp for broadcasts:** in-app only for now (email when SMTP is set up).
-- **Times always in UK time:** times show in the device's time zone, which is right in the UK.
+- (Done) Times are always UK time, whatever the device's time zone.
 - **Festival dates:** need confirming with the priest each year.
 
 ## Before tagging

@@ -1,5 +1,6 @@
 import { TASK_GROUP_LABELS } from '../constants'
 import type { Task, TaskGroup } from '../types'
+import { ukTime } from './uk'
 
 // Who a task is for, in words: "Cleaner (everyone)" or "Ramesh".
 export const assigneeLabel = (t: Pick<Task, 'assigned_group' | 'assigned_to_name'>): string =>
@@ -34,7 +35,7 @@ export function suggestedTitle(text: string): string {
 export const dueMs = (t: Pick<Task, 'due_at'>) => (t.due_at ? new Date(t.due_at).getTime() : Number.POSITIVE_INFINITY)
 export const byDue = (a: Pick<Task, 'due_at'>, b: Pick<Task, 'due_at'>) => dueMs(a) - dueMs(b)
 // "16:30" (24-hour, as in the designs), or "Any time"
-export const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : 'Any time')
+export const hhmm = (iso: string | null) => (iso ? ukTime(new Date(iso)) : 'Any time')
 
 // Matches REMIND_GAP_MINUTES on the server: one reminder per task every 5 minutes.
 export const REMIND_GAP_MS = 5 * 60_000

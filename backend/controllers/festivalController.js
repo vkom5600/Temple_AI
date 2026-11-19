@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { logAudit } from "../services/auditService.js";
 import { templeDate } from "../services/reportService.js";
+import { TIMEZONE } from "../services/taskService.js";
 
 // H2 festival days: the list, and what Home shows (today, coming up, the planning reminder).
 
@@ -54,7 +55,7 @@ export const home = async (req, res) => {
         const word = f.name.split(/\s+/)[0];
         const planned = await pool.query(
             `SELECT 1 FROM bookings WHERE kind = 'event' AND status = 'approved' AND title ILIKE $1
-               AND starts_at::date BETWEEN $2::date - 2 AND $2::date + 2 LIMIT 1`, [`%${word}%`, f.date]);
+               AND (starts_at AT TIME ZONE $3)::date BETWEEN $2::date - 2 AND $2::date + 2 LIMIT 1`, [`%${word}%`, f.date, TIMEZONE]);
         if (planned.rowCount) continue;
         const last = (await pool.query(
             `SELECT b.id, b.title, COUNT(t.id)::int AS tasks,
@@ -70,7 +71,7 @@ export const home = async (req, res) => {
 
     // Temple events booked today (festival programme)
     const events = (await pool.query(
-        `SELECT COUNT(*)::int AS n FROM bookings WHERE kind = 'event' AND status = 'approved' AND starts_at::date = $1::date`, [today])).rows[0].n;
+        `SELECT COUNT(*)::int AS n FROM bookings WHERE kind = 'event' AND status = 'approved' AND (starts_at AT TIME ZONE $2)::date = $1::date`, [today, TIMEZONE])).rows[0].n;
     res.json({ success: true, today: todays, next, reminder, events_today: events });
 };
 

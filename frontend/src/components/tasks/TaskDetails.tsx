@@ -10,6 +10,7 @@ import TaskForm from './TaskForm'
 import ConvertIssueForm from './ConvertIssueForm'
 import type { Issue, Task, TaskComment, TaskInput } from '../../types'
 import RemindButton from './RemindButton'
+import { ukAddDays, ukDate, ukParts } from '../../lib/uk'
 
 // T4 Task details and T5 Review a finished task (designs: screens/19_T4, 20_T5):
 // a side panel with the brief, the submission, the history, and the admin actions.
@@ -111,9 +112,10 @@ export default function TaskDetails({ taskId, onClose, onChanged }: { taskId: nu
   })
   const extend = () => run(async () => {
     if (!task) return { message: '' }
-    const base = task.due_at ? new Date(task.due_at) : new Date()
-    if (base.getTime() < Date.now()) { const now = new Date(); base.setFullYear(now.getFullYear(), now.getMonth(), now.getDate()) }
-    base.setDate(base.getDate() + 1)
+    let base = task.due_at ? new Date(task.due_at) : new Date()
+    // overdue: move it to the same UK time today, then a day on
+    if (base.getTime() < Date.now()) { const n = ukParts(); const b = ukParts(base); base = ukDate(n.y, n.m, n.d, b.h, b.min) }
+    base = ukAddDays(base, 1)
     if (issue) await issuesApi.resolve(issue.id, `Moved to ${fmtWhen(base.toISOString())}`)
     await tasksApi.update(task.id, inputOf(task, base.toISOString()))
     return { message: `Moved to ${fmtWhen(base.toISOString())}` }

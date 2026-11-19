@@ -12,6 +12,7 @@ import { SignupAnswers, SignupsCard, SignupsDrawer } from './Registrations'
 import TaskDetails from '../../components/tasks/TaskDetails'
 import { AREA_INFO, DEFAULT_ACCESS, allowed, can } from '../../lib/access'
 import ViewOnly from '../../components/ViewOnly'
+import { ukAddDays, ukDay, ukNoon } from '../../lib/uk'
 
 const BLANK: UserInput = {
   full_name: '',
@@ -219,7 +220,7 @@ function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }:
     loadTasks()
     if (!checksIn) return
     // Last 7 days of attendance, one day at a time (small team, so 7 quick requests).
-    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return toDateInput(d) })
+    const days = Array.from({ length: 7 }, (_, i) => { return toDateInput(ukAddDays(new Date(), -(6 - i))) })
     Promise.all(days.map((d) => attendanceApi.day(d).then((r) => r.people.find((p) => p.user_id === person.id)?.state ?? 'none').catch(() => 'none')))
       .then((states) => setWeek(days.map((date, i) => ({ date, state: states[i] }))))
   }, [person, checksIn, loadTasks])
@@ -394,7 +395,7 @@ function PersonForm({ person, presence, canEdit, isChairman, onClose, onSaved }:
               {(week ?? Array.from({ length: 7 }, (_, i) => ({ date: String(i), state: 'none' }))).map((d, i) => (
                 <div key={d.date} className={`${d.state === 'here' || d.state === 'left' ? 'on' : d.state === 'absent' ? 'off' : ''} ${i === 6 ? 'is-today' : ''}`}>
                   <i>{d.state === 'here' || d.state === 'left' ? <Icon name="check" size={16} /> : d.state === 'absent' ? <Icon name="x" size={14} /> : ''}</i>
-                  <span>{week ? new Date(`${d.date}T12:00:00`).toLocaleDateString([], { weekday: 'short' }) : ''}</span>
+                  <span>{week ? ukDay(ukNoon(d.date), { weekday: 'short' }) : ''}</span>
                 </div>
               ))}
             </div>
@@ -437,7 +438,7 @@ function PersonFacts({ person }: { person: User }) {
     ['Phone number', person.phone ? <a href={`tel:${person.phone}`}>{person.phone}</a> : '—'],
     ['Email', <a href={`mailto:${person.email}`}>{person.email}</a>],
     ['Emergency contact', person.emergency_contact || '—'],
-    ['Joined', person.joining_date ? new Date(`${person.joining_date.slice(0, 10)}T12:00:00`).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : '—'],
+    ['Joined', person.joining_date ? ukDay(ukNoon(person.joining_date.slice(0, 10)), { day: 'numeric', month: 'short', year: 'numeric' }) : '—'],
   ]
   return (
     <dl className="facts">

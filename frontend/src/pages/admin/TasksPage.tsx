@@ -16,6 +16,7 @@ import RemindButton from '../../components/tasks/RemindButton'
 import { can, useAccess } from '../../lib/access'
 import ViewOnly from '../../components/ViewOnly'
 import { useAuth } from '../../auth/AuthContext'
+import { ukEndOfDay, ukSameDay } from '../../lib/uk'
 
 // T1 Tasks: Today, and T2 Upcoming / All (designs: screens/16_T1, 17_T2).
 // Assign work, track it, sign it off. Safety tasks need a second person.
@@ -26,7 +27,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'all', label: 'All' },
 ]
 
-const endOfToday = () => { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime() }
+const endOfToday = () => ukEndOfDay().getTime()
 
 export default function TasksPage() {
   const access = useAccess()
@@ -83,7 +84,7 @@ export default function TasksPage() {
   const todo = list.filter((t) => t.status === 'todo' && !t.is_overdue)
   const done = list.filter((t) => t.status === 'done')
   // Due today, or "any time" (no deadline)
-  const todayTotal = list.filter((t) => !t.due_at || new Date(t.due_at).toDateString() === new Date().toDateString())
+  const todayTotal = list.filter((t) => !t.due_at || ukSameDay(new Date(t.due_at), new Date()))
   const todayDone = todayTotal.filter(isFinished).length
 
   const setTab = (id: Tab) => {

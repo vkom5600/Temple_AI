@@ -14,13 +14,13 @@ export const snapshot = async () => {
                 COALESCE(u.full_name, INITCAP(t.assigned_group) || ' (anyone)') AS who,
                 (t.status = 'todo' AND t.due_at < NOW()) AS overdue
          FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to
-         WHERE t.status <> 'cancelled' AND (t.due_at IS NULL OR t.due_at::date = CURRENT_DATE OR (t.status = 'todo' AND t.due_at < NOW()))
+         WHERE t.status <> 'cancelled' AND (t.due_at IS NULL OR (t.due_at AT TIME ZONE '${TIMEZONE}')::date = (NOW() AT TIME ZONE '${TIMEZONE}')::date OR (t.status = 'todo' AND t.due_at < NOW()))
          ORDER BY t.due_at NULLS LAST LIMIT 80`);
     const people = await q(
         `SELECT u.full_name, u.role, sp.designation,
                 CASE WHEN a.check_out IS NOT NULL THEN 'left' WHEN a.check_in IS NOT NULL THEN 'on site' ELSE 'not in yet' END AS today
          FROM users u LEFT JOIN staff_profiles sp ON sp.user_id = u.id
-         LEFT JOIN attendance a ON a.user_id = u.id AND a.attendance_date = CURRENT_DATE
+         LEFT JOIN attendance a ON a.user_id = u.id AND a.attendance_date = (NOW() AT TIME ZONE '${TIMEZONE}')::date
          WHERE u.is_active AND u.removed_at IS NULL AND u.approval_status = 'approved' AND u.role IN ('staff', 'volunteer')`).catch(() => []);
     const issues = await q(
         `SELECT i.description, i.category, i.status, i.created_at, r.full_name AS reported_by

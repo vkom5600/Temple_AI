@@ -4,6 +4,7 @@ import { AREAS, CATEGORIES, PRIORITY_LABELS, TASK_GROUP_LABELS, TASK_TEMPLATES, 
 import { toDateInput, toTimeInput } from '../../lib/format'
 import { ErrorNote, Icon, Modal } from '../ui'
 import type { Priority, Recurrence, Task, TaskGroup, TaskInput, User } from '../../types'
+import { ukDate, ukFromInputs, ukParts } from '../../lib/uk'
 
 // An assignee is encoded as "group:cleaner" or "user:12" in the <select>.
 type AssigneeKey = string
@@ -26,7 +27,7 @@ interface Props {
 
 // Admin form for creating / editing a task (also used to turn an issue into a task).
 export default function TaskForm({ title = 'New task', initial = {}, showTemplates, allowMany, submitLabel = 'Assign task', onClose, onSubmit }: Props) {
-  const due = initial.due_at ? new Date(initial.due_at) : (() => { const d = new Date(); d.setHours(d.getHours() + 2, 0, 0, 0); return d })()
+  const due = initial.due_at ? new Date(initial.due_at) : (() => { const p = ukParts(); return ukDate(p.y, p.m, p.d, p.h + 2, 0) })()
   const knownCategory = (c?: string) => !!c && CATEGORIES.includes(c) && c !== 'Other'
 
   const [people, setPeople] = useState<User[]>([])
@@ -89,7 +90,7 @@ export default function TaskForm({ title = 'New task', initial = {}, showTemplat
       priority: form.priority,
       requires_verification: form.requires_verification,
       recurrence: form.recurrence,
-      due_at: form.noDeadline ? null : new Date(`${form.date}T${form.time}`).toISOString(),
+      due_at: form.noDeadline ? null : ukFromInputs(form.date, form.time).toISOString(),
     }
     try {
       await onSubmit(assignees.map((key) => ({ ...base, ...fromKey(key) })))

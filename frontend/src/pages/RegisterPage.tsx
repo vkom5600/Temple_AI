@@ -6,6 +6,7 @@ import { AVAILABILITY_LABELS, DESIGNATION_LABELS, HELP_LABELS, homePath } from '
 import { ErrorNote, Icon, Modal, Spinner, type IconName } from '../components/ui'
 import EntryShell from '../components/EntryShell'
 import type { Designation, RegisterInput, SignupAvailability, SignupHelp } from '../types'
+import { ukDay, ukNoon } from '../lib/uk'
 
 const BLANK: RegisterInput = { full_name: '', email: '', phone: '', password: '', role: 'volunteer', designation: '', availability: [], help: [], agree_rules: false }
 const toggle = <T,>(list: T[] | undefined, item: T): T[] => (list ?? []).includes(item) ? (list ?? []).filter((x) => x !== item) : [...(list ?? []), item]
@@ -76,7 +77,7 @@ export default function RegisterPage() {
           <h1>Registration closed</h1>
           <p className="lead" style={{ margin: 0 }}>
             {nextOpens
-              ? `Sign-ups are closed right now. The next window opens ${new Date(`${nextOpens}T12:00:00`).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}.`
+              ? `Sign-ups are closed right now. The next window opens ${ukDay(ukNoon(nextOpens), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}.`
               : 'Sign-ups are closed right now. Please contact the temple office.'}
           </p>
           <Link to="/login" className="btn btn-outline btn-big">Back to sign in</Link>
@@ -95,7 +96,7 @@ export default function RegisterPage() {
       {open && !done && (
         <>
           <h1>Join the temple team</h1>
-          <span className="pill pill-grn open-pill"><span className="dot" /> Sign-ups open{closes ? ` until ${new Date(`${closes}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}</span>
+          <span className="pill pill-grn open-pill"><span className="dot" /> Sign-ups open{closes ? ` until ${ukDay(ukNoon(closes))}` : ''}</span>
           <p className="lead">Tell us a little about you. The committee checks every sign-up, and you can sign in once it's approved.</p>
           <form className="stack" onSubmit={submit} noValidate>
             <fieldset className="join-as">

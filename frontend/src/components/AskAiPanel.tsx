@@ -3,6 +3,7 @@ import { aiApi, attendanceApi, issuesApi, tasksApi } from '../api/endpoints'
 import { toDateInput } from '../lib/format'
 import { assigneeLabel } from '../lib/tasks'
 import { Icon, Modal } from './ui'
+import { ukAddDays, ukDateKey, ukDay, ukParts, ukTime } from '../lib/uk'
 
 // AI1 Ask AI (design: screens/32_AI1): a side panel on every admin page (⌘K).
 // Phase 3 connects Temple AI (Claude). Until then it answers the common questions
@@ -11,8 +12,8 @@ import { Icon, Modal } from './ui'
 interface Message { from: 'me' | 'ai'; text: string; body?: ReactNode; source?: string }
 
 const QUESTIONS = ['Who attended this week?', 'Who is on site right now?', 'What is still not done today?', 'Which safety checks are waiting?', 'What problems are open?']
-const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : 'Any time')
+const now = () => ukTime(new Date())
+const hhmm = (iso: string | null) => (iso ? ukTime(new Date(iso)) : 'Any time')
 
 async function answer(question: string, history: Message[]): Promise<Message> {
   const q = question.toLowerCase()
@@ -20,10 +21,9 @@ async function answer(question: string, history: Message[]): Promise<Message> {
   if (/week|attended|attendance/.test(q)) {
     // Monday of this week to today
     const today = new Date()
-    const monday = new Date(today)
-    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+    const monday = ukAddDays(today, -((ukParts(today).wd + 6) % 7))
     const days: Date[] = []
-    for (const d = new Date(monday); d <= today; d.setDate(d.getDate() + 1)) days.push(new Date(d))
+    for (let d = monday; ukDateKey(d) <= ukDateKey(today); d = ukAddDays(d, 1)) days.push(d)
     const results = await Promise.all(days.map((d) => attendanceApi.day(toDateInput(d))))
     const names = new Map<number, string>()
     results.forEach((r) => r.people.forEach((p) => names.set(p.user_id, p.full_name)))
@@ -35,10 +35,10 @@ async function answer(question: string, history: Message[]): Promise<Message> {
     const possible = rows.length * days.length
     return {
       from: 'ai',
-      text: `This week so far (${days[0].toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })} to today): ${present} of ${possible} staff days, so ${possible ? Math.round((present / possible) * 100) : 0}%.`,
+      text: `This week so far (${ukDay(days[0])} to today): ${present} of ${possible} staff days, so ${possible ? Math.round((present / possible) * 100) : 0}%.`,
       body: (
         <table className="ai-table">
-          <thead><tr><th>Name</th>{days.map((d) => <th key={d.toISOString()}>{d.toLocaleDateString([], { weekday: 'short' })}</th>)}<th>Total</th></tr></thead>
+          <thead><tr><th>Name</th>{days.map((d) => <th key={d.toISOString()}>{ukDay(d, { weekday: 'short' })}</th>)}<th>Total</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.name}>

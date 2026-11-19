@@ -7,6 +7,7 @@ import { ErrorNote, Icon, Modal, type IconName } from '../../components/ui'
 import { BRAND } from '../../branding'
 import { qrPath, qrPng } from '../../lib/qr'
 import type { SignupRole, SignupWindow, User, SignupDetails } from '../../types'
+import { ukAddDays, ukDay, ukNoon, ukSameDay, ukTime } from '../../lib/uk'
 
 // P1 "Volunteer registration" card + P4 Sign-up window (designs: screens/27_P1, P4_sign-up-window).
 // The chairman opens sign-ups for chosen groups between two dates (they close by
@@ -19,8 +20,8 @@ const ROLE_ROWS: { role: SignupRole; label: string; hint: string; icon: IconName
 ]
 const ROLE_WORD: Record<SignupRole, string> = { volunteer: 'Volunteer', staff: 'Staff', committee: 'Committee' }
 export const signupLink = () => `${window.location.origin}/join`
-const shortDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString([], { day: 'numeric', month: 'short' })
-const longDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+const shortDay = (d: string) => ukDay(ukNoon(d), { day: 'numeric', month: 'short' })
+const longDay = (d: string) => ukDay(ukNoon(d))
 
 const copyLink = async (toast: (m: string) => void) => {
   try { await navigator.clipboard.writeText(signupLink()); toast('Sign-up link copied') } catch { toast(signupLink()) }
@@ -231,11 +232,9 @@ export function SignupsDrawer({ pending, rejected, onClose, onChange }: { pendin
 
   const when = (iso: string) => {
     const d = new Date(iso)
-    const today = new Date().toDateString() === d.toDateString()
-    const y = new Date(); y.setDate(y.getDate() - 1)
-    const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-    if (today) return `Today, ${time}`
-    if (y.toDateString() === d.toDateString()) return `Yesterday, ${time}`
+    const time = ukTime(d)
+    if (ukSameDay(d, new Date())) return `Today, ${time}`
+    if (ukSameDay(d, ukAddDays(new Date(), -1))) return `Yesterday, ${time}`
     return timeAgo(iso)
   }
 
@@ -345,7 +344,7 @@ export function SignupAnswers({ details }: { details?: SignupDetails | null }) {
     <dl className="signup-answers">
       {details.availability?.length > 0 && <><dt>Available</dt><dd>{details.availability.map((k) => AVAILABILITY_LABELS[k]).join(', ')}</dd></>}
       {details.help?.length > 0 && <><dt>Areas</dt><dd>{details.help.map((k) => HELP_LABELS[k]).join(', ')}</dd></>}
-      {details.rules_agreed_at && <><dt>Rules</dt><dd>Agreed {new Date(details.rules_agreed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</dd></>}
+      {details.rules_agreed_at && <><dt>Rules</dt><dd>Agreed {ukDay(new Date(details.rules_agreed_at), { day: 'numeric', month: 'short' })}</dd></>}
     </dl>
   )
 }
