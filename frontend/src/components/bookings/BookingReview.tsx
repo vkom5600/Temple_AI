@@ -87,7 +87,7 @@ export default function BookingReview({ bookingId, onClose, onChanged }: { booki
         <div className="row" style={{ flexWrap: 'nowrap', gap: 14 }}>
           <span className="tile-ic" style={{ background: 'var(--ind-d)', color: '#fff' }}><Icon name="calendar" size={20} /></span>
           <div>
-            <span className="ulabel" style={{ color: 'var(--saf-d)' }}>{b?.kind === 'event' ? 'Temple event' : b?.source === 'desk' ? 'Booking (office)' : 'Booking request'}</span>
+            <span className="ulabel" style={{ color: 'var(--saf-d)' }}>{b?.kind === 'event' ? 'Temple event' : b?.source === 'desk' ? 'Booking (office)' : b?.source === 'web' ? 'Booking request · from the website' : 'Booking request'}</span>
             <h2 style={{ fontSize: 22 }}>{b ? `${b.title} – ${b.resource_name}` : 'Loading…'}</h2>
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function BookingReview({ bookingId, onClose, onChanged }: { booki
             </div>
           </div>
 
-          {b.source === 'mobile' && detail.rules.length > 0 && (
+          {b.source !== 'desk' && detail.rules.length > 0 && (
             <section className="rules-card">
               <div className="dsec-head" style={{ textTransform: 'none', letterSpacing: 0, fontSize: 16 }}>
                 <span className="row" style={{ gap: 8 }}><Icon name="shield" size={18} /> Temple Rules – agreed by requester</span>

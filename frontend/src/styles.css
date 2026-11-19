@@ -1543,3 +1543,5 @@ tr.row-open:hover td { background: #fbfaf7; }
 .signup-answers { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; background: #faf8f4; border: 1px solid var(--line-2); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; }
 .signup-answers dt { color: var(--muted); }
 .signup-answers dd { margin: 0; color: var(--ind-d); font-weight: 500; }
+.hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.entry .tiles { grid-template-columns: 1fr 1fr; }

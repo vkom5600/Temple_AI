@@ -64,6 +64,7 @@ export default function LoginPage() {
         </button>
       </form>
       <p className="fine">New here? <Link to="/register">Join the temple team</Link></p>
+      <p className="fine">Want to use a hall or room? <Link to="/book">Book a hall or room</Link></p>
       {import.meta.env.DEV && (
         <section className="demo-accounts">
           <h2 className="eyebrow">Demo accounts (development only)</h2>

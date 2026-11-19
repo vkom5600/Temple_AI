@@ -149,6 +149,15 @@ export const aiApi = {
     api<{ answer: string; source: string }>('/ai/ask', { method: 'POST', body: { question, history } }),
 }
 
+// W1 public booking (no sign-in)
+export const publicApi = {
+  options: () => api<{ resources: Pick<Resource, 'id' | 'name' | 'kind' | 'capacity'>[]; rules: { id: number; text: string }[] }>('/public/booking-options'),
+  check: (input: { resource_id: number; starts_at: string; ends_at: string; guests: number | null }) =>
+    api<{ free: boolean; problems: string[] }>('/public/check', { method: 'POST', body: input }),
+  request: (input: Record<string, unknown>) =>
+    api<{ reference: string; message: string; booking: { title: string; resource_name: string; starts_at: string; ends_at: string; guests: number | null } }>('/public/bookings', { method: 'POST', body: input }),
+}
+
 // H2 festival days
 export type FestivalInput = Omit<Festival, 'id' | 'snoozed_until'>
 export const festivalsApi = {

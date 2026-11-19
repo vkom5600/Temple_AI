@@ -27,6 +27,7 @@ import planRoutes from "./routes/planRoutes.js";
 import askRoutes from "./routes/askRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import festivalRoutes from "./routes/festivalRoutes.js";
+import publicRoutes from "./routes/publicRoutes.js";
 import { resourceRouter, ruleRouter } from "./routes/resourceRoutes.js";
 // import calendarRoutes from "./routes/calendarRoutes.js";
 // Phase 4
@@ -56,6 +57,7 @@ app.use("/api/plans", planRoutes);
 app.use("/api/ai", askRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/festivals", festivalRoutes);
+app.use("/api/public", publicRoutes);
 // app.use("/api/calendar", calendarRoutes);
 app.use("/api/audit-logs", auditRoutes);
 

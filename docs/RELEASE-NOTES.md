@@ -30,7 +30,7 @@ volunteers on their phones.
   reminders on the task card; messages from the chairman; today at the temple;
   request a booking and see my bookings; report a problem.
 
-**Public:** join the temple team (only open groups, closes by itself), booking request form.
+**Public:** join the temple team (only open groups, closes by itself), and book a hall or room at /book without signing in (W1).
 
 **Behind the scenes**
 - Every request checks sign-in, role and committee access; all changes go in the activity log.

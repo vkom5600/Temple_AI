@@ -49,6 +49,7 @@ const PAGES = [
   ['sign in', '/login', null, ALL],
   ['join', '/register', null, ALL],
   ['join (short link)', '/join', null, ['phone']],
+  ['book a hall (public)', '/book', null, ['phone', 'tablet', 'desktop']],
   ['join: temple rules', '/join', null, ['phone', 'desktop'], `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Temple Rules')?.click()`],
   ['staff: notifications', '/staff', 'anil', ['phone'], clickSel('.m-bell')],
   ['home', '/admin', 'raghu', ALL],

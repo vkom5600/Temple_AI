@@ -301,7 +301,7 @@ export interface Booking {
   notes: string | null
   deposit_paid: boolean
   status: BookingStatus
-  source: 'mobile' | 'desk'
+  source: 'mobile' | 'desk' | 'web'
   requested_by: number | null
   requested_by_name: string | null
   rules_agreed: number[]

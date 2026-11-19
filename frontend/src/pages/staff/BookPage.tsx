@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { bookingsApi, resourcesApi, rulesApi } from '../../api/endpoints'
+import { bookingsApi, publicApi, resourcesApi, rulesApi } from '../../api/endpoints'
+import EntryShell from '../../components/EntryShell'
 import { useAuth } from '../../auth/AuthContext'
 import { BRAND } from '../../branding'
-import { toIso } from '../../lib/bookings'
+import { bookingDay, bookingTimes, toIso } from '../../lib/bookings'
 import { toDateInput } from '../../lib/format'
 import { ErrorNote, Icon, Spinner } from '../../components/ui'
 import type { Resource, TempleRule } from '../../types'
@@ -12,11 +13,13 @@ import { ukAddDays } from '../../lib/uk'
 // M7 Request a booking (design: screens/38_M7, final review p.25): the phone booking.
 // The person ticks every Temple Rule before Send unlocks ("4 of 6 agreed"); the request
 // then waits for the chairman or a committee member (AC2).
-export default function BookPage() {
+export default function BookPage({ publicMode = false }: { publicMode?: boolean }) {
   const { user } = useAuth()
+  const [sent, setSent] = useState<{ reference: string; message: string; booking: { title: string; resource_name: string; starts_at: string; ends_at: string; guests: number | null } } | null>(null)
+  const [trap, setTrap] = useState('') // hidden field; only bots fill it in
   const navigate = useNavigate()
-  const [resources, setResources] = useState<Resource[] | null>(null)
-  const [rules, setRules] = useState<TempleRule[]>([])
+  const [resources, setResources] = useState<Pick<Resource, 'id' | 'name' | 'kind' | 'capacity'>[] | null>(null)
+  const [rules, setRules] = useState<Pick<TempleRule, 'id' | 'text'>[]>([])
   const tomorrow = ukAddDays(new Date(), 1)
   const [f, setF] = useState({
     title: '', resource_id: 0, date: toDateInput(tomorrow), start: '14:00', end: '18:00', guests: '',
@@ -29,18 +32,25 @@ export default function BookPage() {
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }))
 
   useEffect(() => {
+    if (publicMode) {
+      publicApi.options().then((r) => { setResources(r.resources); setRules(r.rules) }).catch(() => setResources([]))
+      return
+    }
     resourcesApi.list().then((r) => setResources(r.resources.filter((s) => s.kind === 'hall' || s.kind === 'room'))).catch(() => setResources([]))
     rulesApi.list().then((r) => setRules(r.rules.filter((x) => x.ask_requester))).catch(() => {})
-  }, [])
+  }, [publicMode])
 
   useEffect(() => {
     if (!f.resource_id || !f.date || f.end <= f.start) { setFree(null); return }
     const id = setTimeout(() => {
-      bookingsApi.check({ resource_id: f.resource_id, starts_at: toIso(f.date, f.start), ends_at: toIso(f.date, f.end), guests: Number(f.guests) || null })
-        .then(setFree).catch(() => setFree(null))
+      const input = { resource_id: f.resource_id, starts_at: toIso(f.date, f.start), ends_at: toIso(f.date, f.end), guests: Number(f.guests) || null }
+      ;(publicMode
+        ? publicApi.check(input).then((r) => setFree({ free: r.free, problems: r.problems, clashes: [] }))
+        : bookingsApi.check(input).then(setFree)
+      ).catch(() => setFree(null))
     }, 300)
     return () => clearTimeout(id)
-  }, [f.resource_id, f.date, f.start, f.end, f.guests])
+  }, [f.resource_id, f.date, f.start, f.end, f.guests, publicMode])
 
   const allAgreed = rules.length > 0 && rules.every((r) => agreed.has(r.id))
   const canSend = f.title.trim() && f.resource_id && f.date && f.end > f.start && f.contact_name.trim() && f.contact_phone.trim() &&
@@ -51,6 +61,16 @@ export default function BookPage() {
     setError('')
     setBusy(true)
     try {
+      if (publicMode) {
+        const r = await publicApi.request({
+          resource_id: f.resource_id, title: f.title.trim(), starts_at: toIso(f.date, f.start), ends_at: toIso(f.date, f.end),
+          guests: f.guests === '' ? null : Number(f.guests), food: f.food,
+          contact_name: f.contact_name.trim(), contact_phone: f.contact_phone.trim(), rules_agreed: [...agreed], website: trap,
+        })
+        setSent(r)
+        window.scrollTo(0, 0)
+        return
+      }
       const r = await bookingsApi.create({
         resource_id: f.resource_id, title: f.title.trim(), starts_at: toIso(f.date, f.start), ends_at: toIso(f.date, f.end),
         guests: f.guests === '' ? null : Number(f.guests), food: f.food,
@@ -63,21 +83,34 @@ export default function BookPage() {
     }
   }
 
-  return (
-    <div className="m-wrap">
-      <div className="m-subbar">
-        <Link to="/staff" className="icon-btn" aria-label="Back"><Icon name="arrow-left" size={20} /></Link>
-        <b>Request a booking</b>
-        <Link to="/staff" className="link-btn">Cancel</Link>
-      </div>
+  if (publicMode && sent) {
+    return (
+      <EntryShell>
+        <div className="stack center" role="status" style={{ paddingTop: 16 }}>
+          <span className="tile-ic ic-grn" style={{ margin: '0 auto', width: 64, height: 64, borderRadius: '50%' }}><Icon name="check" size={30} /></span>
+          <h1>Request sent</h1>
+          <p className="lead" style={{ margin: 0 }}>{sent.message}</p>
+        </div>
+        <section className="jcard" style={{ marginTop: 18 }}>
+          <h2><Icon name="calendar" size={17} /> Your request <span className="push-left" style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--saf-d)' }}>Ref: {sent.reference}</span></h2>
+          <dl className="signup-answers" style={{ background: 'none', border: 0, padding: 0 }}>
+            <dt>For</dt><dd>{sent.booking.title}</dd>
+            <dt>Where</dt><dd>{sent.booking.resource_name}</dd>
+            <dt>When</dt><dd>{bookingDay(sent.booking.starts_at)}, {bookingTimes(sent.booking)}</dd>
+            {sent.booking.guests != null && <><dt>Guests</dt><dd>{sent.booking.guests}</dd></>}
+          </dl>
+        </section>
+        <p className="fine"><Icon name="phone" size={13} /> Keep the reference. If anything changes, call the temple office and quote it.</p>
+        <button className="btn btn-outline btn-big" onClick={() => { setSent(null); setAgreed(new Set()); set('title', '') }}>Make another request</button>
+      </EntryShell>
+    )
+  }
 
-      <div className="left-card">
-        <span className="tile-ic ic-ind"><Icon name="home" size={20} /></span>
-        <div><b>{BRAND.templeName}</b><div className="muted small">Please share the event details for the committee and priests to approve.</div></div>
-      </div>
+  const body = (
+    <>
 
-      <label className="field"><span className="label">What is it for? <span className="muted">(e.g. Birthday puja)</span></span>
-        <input value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} />
+      <label className="field"><span className="label">What is it for?</span>
+        <input value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} placeholder="e.g. Birthday puja" />
       </label>
 
       <div className="field">
@@ -86,7 +119,7 @@ export default function BookPage() {
           <div className="tiles">
             {resources.map((r) => (
               <button key={r.id} type="button" className={`tile ${f.resource_id === r.id ? 'on' : ''}`} onClick={() => set('resource_id', r.id)}>
-                <b>{r.name}</b><span>{r.kind === 'hall' ? `Up to ${r.capacity ?? '?'} cap` : `Meeting / ${r.capacity ?? '?'} cap`}</span>
+                <b>{r.name}</b><span>{r.capacity ? `Up to ${r.capacity} people` : r.kind === 'hall' ? 'Hall' : 'Room'}</span>
                 {f.resource_id === r.id && <i className="tile-check"><Icon name="check" size={12} /></i>}
               </button>
             ))}
@@ -113,10 +146,11 @@ export default function BookPage() {
         {f.food && <span className="muted small">External pure-veg catering must get kitchen clearance first.</span>}
       </div>
 
-      <label className="field"><span className="label">Contact name</span>
+      {publicMode && <input className="hp-field" tabIndex={-1} autoComplete="off" aria-hidden="true" value={trap} onChange={(e) => setTrap(e.target.value)} name="website" />}
+      <label className="field"><span className="label">{publicMode ? 'Your name and mobile' : 'Contact name'}</span>
         <span className="ifield"><Icon name="user" /><input value={f.contact_name} onChange={(e) => set('contact_name', e.target.value)} /></span>
       </label>
-      <label className="field"><span className="label">Mobile phone</span>
+      <label className="field">{!publicMode && <span className="label">Mobile phone</span>}
         <span className="ifield"><Icon name="phone" /><input type="tel" value={f.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} placeholder="+44 7…" /></span>
       </label>
 
@@ -140,7 +174,35 @@ export default function BookPage() {
 
       <ErrorNote>{error}</ErrorNote>
       {!allAgreed && <p className="fine" style={{ margin: 0 }}><Icon name="lock" size={14} /> Tick all rules to send</p>}
-      <button className="btn btn-primary btn-big" disabled={!canSend} onClick={send}><Icon name="send" size={18} /> {busy ? 'Sending…' : 'Send request'}</button>
+      <button className={`btn btn-big ${publicMode ? 'btn-act' : 'btn-primary'}`} disabled={!canSend} onClick={send}><Icon name="send" size={18} /> {busy ? 'Sending…' : 'Send request'}</button>
+      {publicMode && <p className="fine" style={{ margin: 0 }}>Send unlocks when all rules are ticked. Nothing is booked until a committee member approves it.</p>}
+    </>
+  )
+
+  if (publicMode) {
+    return (
+      <EntryShell>
+        <h1>Book a hall or room</h1>
+        <p className="lead">Send a request. Nothing is booked until a committee member approves it.</p>
+        <div className="stack" style={{ gap: 16 }}>{body}</div>
+        <p className="fine">Already part of the temple team? <Link to="/login">Sign in</Link></p>
+      </EntryShell>
+    )
+  }
+
+  return (
+    <div className="m-wrap">
+      <div className="m-subbar">
+        <Link to="/staff" className="icon-btn" aria-label="Back"><Icon name="arrow-left" size={20} /></Link>
+        <b>Request a booking</b>
+        <Link to="/staff" className="link-btn">Cancel</Link>
+      </div>
+
+      <div className="left-card">
+        <span className="tile-ic ic-ind"><Icon name="home" size={20} /></span>
+        <div><b>{BRAND.templeName}</b><div className="muted small">Please share the event details for the committee and priests to approve.</div></div>
+      </div>
+      {body}
     </div>
   )
 }

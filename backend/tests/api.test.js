@@ -151,6 +151,31 @@ describe("bookings", () => {
     });
 });
 
+describe("public booking form (W1)", () => {
+    let opts;
+    const slot = () => ({ starts_at: inDays(12, 14).toISOString(), ends_at: inDays(12, 16).toISOString() });
+    test("anyone can see the halls and the rules, but not other people's bookings", async () => {
+        opts = (await get("/public/booking-options", null)).body;
+        assert.ok(opts.resources.length >= 2 && opts.rules.length >= 1);
+        assert.ok(opts.resources.every((r) => ["hall", "room"].includes(r.kind)));
+        const c = await post("/public/check", null, { resource_id: opts.resources[0].id, ...slot(), guests: 10 });
+        assert.equal(c.status, 200);
+        assert.equal(c.body.clashes, undefined, "no clash details for the public");
+    });
+    test("a request needs name, mobile and every rule; it arrives as pending", async () => {
+        const base = { resource_id: opts.resources.find((r) => r.name === "Room G37")?.id ?? opts.resources[0].id, title: "Test: website request", ...slot(), guests: 10, contact_name: "Test Visitor", contact_phone: "+44 7700 900777" };
+        assert.equal((await post("/public/bookings", null, { ...base, contact_phone: "" })).status, 400);
+        assert.equal((await post("/public/bookings", null, { ...base, rules_agreed: [] })).status, 400);
+        const ok = await post("/public/bookings", null, { ...base, rules_agreed: opts.rules.map((r) => r.id) });
+        assert.equal(ok.status, 201);
+        assert.match(ok.body.reference, /^IHC-\d{4}-\d{4}$/);
+        const waiting = (await get("/bookings?status=pending", "raghu")).body.bookings.find((b) => b.title === "Test: website request");
+        assert.ok(waiting, "shows for the committee");
+        assert.equal(waiting.source, "web");
+        assert.equal((await post("/public/bookings", null, { ...base, rules_agreed: opts.rules.map((r) => r.id), website: "spam" })).status, 400, "bot trap");
+    });
+});
+
 describe("people", () => {
     test("committee can't change people by default; the chairman can, and can remove", async () => {
         const created = await post("/users", "raghu", { full_name: "Test Volunteer", email: `tv${Date.now()}@example.com`, role: "volunteer", password: "Testpass123" });
